@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DigiGST — EY Tax Platform</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+
+<style type="text/tailwindcss">
+@theme {
+  --color-ey-yellow: #FFD400;
+  --color-ey-yellow-dark: #E6BF00;
+  --color-ey-yellow-light: #FFF9CC;
+  --color-ey-yellow-pale: #FFFDE8;
+  --color-ey-navy: #1A1A2E;
+  --color-ey-navy-mid: #2D2D4E;
+  --color-ey-navy-light: #3D3D5C;
+  --color-ey-gray: #F5F5F3;
+  --color-ey-gray-mid: #E8E8E4;
+  --color-ey-gray-dark: #9B9B8E;
+  --color-ey-charcoal: #2C2C2C;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+</style>
+
+<script>
+/* legacy stub — v4 doesn't use this, but keep so the runtime config block below doesn't throw */
+window.tailwind = window.tailwind || { config:{} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+<script>
+tailwind.config = {
+  theme:{
+    extend:{
+      colors:{
+        ey:{
+          yellow:"#FFD400","yellow-dark":"#E6BF00","yellow-light":"#FFF9CC","yellow-pale":"#FFFDE8",
+          navy:"#1A1A2E","navy-mid":"#2D2D4E","navy-light":"#3D3D5C",
+          gray:"#F5F5F3","gray-mid":"#E8E8E4","gray-dark":"#9B9B8E",
+          charcoal:"#2C2C2C"
+        }
+      },
+      fontFamily:{ sans:["IBM Plex Sans","sans-serif"], mono:["IBM Plex Mono","monospace"] }
+    }
+  }
+};
+</script>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"IBM Plex Sans",sans-serif;background:#F5F5F3;color:#2C2C2C}
+
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.3)}
+  .no-scrollbar::-webkit-scrollbar{display:none}
+
+  input:focus,select:focus,textarea:focus,button:focus{outline:none}
+  input:focus,textarea:focus,select:focus{box-shadow:0 0 0 3px rgba(255,212,0,.18)}
+
+  .snav{transition:background .15s,border-color .15s;cursor:pointer}
+  .snav:hover{background:rgba(255,212,0,.08)}
+  .snav.active{background:rgba(255,212,0,.14);border-left-color:#FFD400 !important}
+  .snav.flash{animation:navFlash 1.6s ease}
+  @keyframes navFlash{0%,100%{background:transparent}30%,70%{background:rgba(255,212,0,.3)}}
+
+  .modal-ov{position:fixed;inset:0;background:rgba(26,26,46,.55);z-index:9998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+
+  @keyframes flash{
+    0%,100%{background-color:transparent}
+    20%,80%{background-color:rgba(255,212,0,.35)}
+  }
+
+  /* table striping */
+  table{border-collapse:separate;border-spacing:0}
+
+  /* nice card lift on hover */
+  .card-lift{transition:transform .2s ease, box-shadow .2s ease}
+  .card-lift:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(26,26,46,.06)}
+
+  /* generic badge — used by features.jsx severity tags */
+  .badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#1A1A2E">
+  <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="600" height="400" fill="#1A1A2E"/>
+    <rect x="180" y="120" width="240" height="160" rx="24" fill="#FFD400"/>
+    <text x="300" y="232" font-family="IBM Plex Sans, sans-serif" font-size="84" font-weight="700" text-anchor="middle" fill="#1A1A2E" letter-spacing="-2">EY</text>
+    <text x="300" y="320" font-family="IBM Plex Sans, sans-serif" font-size="22" font-weight="500" text-anchor="middle" fill="#FFD400" letter-spacing="6">DIGIGST</text>
+    <text x="300" y="346" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="400" text-anchor="middle" fill="#9B9B8E" letter-spacing="2">TAX  PLATFORM</text>
+  </svg>
+</template>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="helpers.jsx"></script>
+<script type="text/babel" src="ai-engine.jsx"></script>
+<script type="text/babel" src="ai-chat.jsx"></script>
+<script type="text/babel" src="pages.jsx"></script>
+<script type="text/babel" src="features.jsx"></script>
+
+<script type="text/babel">
+const {useState, useRef, useEffect, useMemo, useCallback} = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "aiLayout": "bubble",
+  "density": "regular",
+  "showSparkBriefing": true
+}/*EDITMODE-END*/;
+
+const NAV = [
+  {id:"dashboard",     label:"Dashboard",        icon:"⊞"},
+  {id:"docextract",    label:"Doc Extract",      icon:"📄", isNew:true},
+  {id:"reconcile",     label:"Reconcile",        icon:"⚖",  isNew:true},
+  {id:"notices",       label:"DRC Replies",      icon:"✉",  isNew:true},
+  {id:"returnreports", label:"Return Reports",   icon:"📋"},
+  {id:"returndash",    label:"Return Summary",   icon:"📊"},
+  {id:"imsreport",     label:"IMS",              icon:"🏭"},
+  {id:"ledgers",       label:"Ledgers",          icon:"📒"},
+  {id:"einvoice",      label:"E-Invoice",        icon:"🖨"},
+  {id:"utilities",     label:"Utilities",        icon:"🔧"},
+  {id:"aiinsights",    label:"AI Insights",      icon:"✦"},
+];
+
+const PERIOD_GROUPS = [
+  {label:"Current",   options:["Apr 2024"]},
+  {label:"Quarters",  options:["Q1 FY25","Q4 FY24","Q3 FY24"]},
+  {label:"Months",    options:["Mar 2024","Feb 2024","Jan 2024","Dec 2023","Nov 2023","Oct 2023"]},
+  {label:"Year",      options:["FY 2023-24"]},
+  {label:"",          options:["All"]},
+];
+
+function App(){
+  // Tweaks (host protocol via TweaksPanel)
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const aiLayout = t.aiLayout;
+
+  // Navigation + period
+  const [nav, setNav]               = useState("dashboard");
+  const [period, setPeriod]         = useState("Mar 2024");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [navFlash, setNavFlash]     = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+
+  // Modals
+  const [reportModal, setReportModal]   = useState(false);
+  const [keyModal, setKeyModal]         = useState(false);
+  const [keyInput, setKeyInput]         = useState("");
+  const [keyErr, setKeyErr]             = useState(false);
+  const [, forceRender]                 = useState(0);
+
+  // AI panel open states (per layout)
+  const [aiOpen, setAiOpen]             = useState(false);
+
+  // Chat state (single source of truth, shared across layouts)
+  const goNav = useCallback((id, refId) => {
+    setNav(id);
+    setNavFlash(id); setTimeout(()=>setNavFlash(null), 1600);
+    if(refId != null){
+      setHighlightId(refId);
+      setTimeout(()=>setHighlightId(null), 2400);
+    } else {
+      setHighlightId(null);
+    }
+  }, []);
+
+  const onRefClick = useCallback((ref) => {
+    if(ref.refType === "return")  goNav("returnreports", ref.id);
+    else if(ref.refType === "ims") goNav("imsreport", ref.id);
+    else if(ref.refType === "anomaly"){
+      const a = ANOMALIES.find(x=>x.id===ref.id);
+      if(a && a.refId) goNav("returnreports", a.refId);
+      else goNav("aiinsights");
+    }
+    else if(ref.refType === "page") goNav(ref.id);
+    // Close inline modal & sidepanel-floating contexts on navigation? Keep open for sidepanel; close inline.
+    if(aiLayout === "inline") setAiOpen(false);
+  }, [aiLayout, goNav]);
+
+  const chat = useAIChat({onNavigate: goNav, onHighlightRef: onRefClick});
+
+  // Open chat panel automatically for sidepanel layout (persistent)
+  useEffect(() => {
+    if(aiLayout === "sidepanel") setAiOpen(true);
+    if(aiLayout === "bubble" || aiLayout === "inline") setAiOpen(false);
+  }, [aiLayout]);
+
+  // API key handling
+  function saveKey(){
+    const k = keyInput.trim();
+    if(!k.startsWith("sk-ant-")){ setKeyErr(true); return; }
+    window.__APIKEY = k;
+    setKeyErr(false); setKeyModal(false); setKeyInput("");
+    chat.reset();
+    forceRender(x=>x+1);
+  }
+
+  function clearKey(){
+    window.__APIKEY = "";
+    setKeyModal(false); setKeyInput("");
+    chat.reset();
+    forceRender(x=>x+1);
+  }
+
+  const sW = sidebarOpen ? "w-56" : "w-16";
+  // Main content right padding for sidepanel layout
+  const contentRightPad = (aiLayout === "sidepanel" && aiOpen) ? "pr-[400px]" : "";
+
+  // Keyboard shortcut Ctrl+/
+  useEffect(()=>{
+    const fn = (e) => {
+      if((e.ctrlKey || e.metaKey) && e.key === "/"){
+        e.preventDefault();
+        if(aiLayout === "bubble" || aiLayout === "sidepanel"){ setAiOpen(o=>!o); }
+        else if(aiLayout === "inline"){ setAiOpen(true); }
+        else if(aiLayout === "fullpage"){ goNav("aiinsights"); }
+      }
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [aiLayout, goNav]);
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-ey-gray">
+      {/* ════════ SIDEBAR ════════ */}
+      <aside className={`fixed left-0 top-0 h-full ${sW} bg-ey-navy flex flex-col z-40 transition-[width] duration-200`}>
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-ey-navy-mid h-14">
+          <div className="w-9 h-9 bg-ey-yellow rounded-lg flex items-center justify-center font-bold text-ey-navy text-sm flex-shrink-0">EY</div>
+          {sidebarOpen && <div className="min-w-0">
+            <div className="text-white font-semibold text-[13px] leading-tight">DigiGST</div>
+            <div className="text-ey-gray-dark text-[10px] leading-tight">Tax Platform</div>
+          </div>}
+        </div>
+        <button onClick={()=>setSidebarOpen(!sidebarOpen)}
+          className="absolute -right-3 top-16 w-6 h-6 bg-ey-yellow hover:bg-ey-yellow-dark rounded-full flex items-center justify-center text-ey-navy text-[10px] font-bold shadow-md z-50">
+          {sidebarOpen?"‹":"›"}
+        </button>
+
+        <nav className="flex-1 pt-3 overflow-y-auto">
+          {NAV.map(item => (
+            <div key={item.id} onClick={()=>goNav(item.id)}
+              className={`snav flex items-center gap-3 px-4 py-2.5 border-l-[3px] border-transparent ${nav===item.id?"active":""} ${navFlash===item.id?"flash":""}`}>
+              <span className="text-[15px] flex-shrink-0 w-5 text-center">{item.icon}</span>
+              {sidebarOpen && (
+                <>
+                  <span className={`text-[13px] whitespace-nowrap ${nav===item.id?"text-ey-yellow font-medium":"text-gray-300"}`}>{item.label}</span>
+                  {item.id === "aiinsights" && <span className="ml-auto text-[9px] bg-ey-yellow text-ey-navy px-1.5 py-0.5 rounded font-bold tracking-wider">AI</span>}
+                {item.isNew && <span className="ml-auto text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded font-bold tracking-wider">NEW</span>}
+                </>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        {sidebarOpen && (
+          <div className="px-4 py-3 border-t border-ey-navy-mid">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-full bg-ey-yellow flex items-center justify-center text-ey-navy font-bold text-[10px]">U1</div>
+              <div className="min-w-0">
+                <div className="text-white text-[11px] font-medium leading-tight">User 1</div>
+                <div className="text-ey-gray-dark text-[9px] leading-tight">Tax Manager</div>
+              </div>
+            </div>
+            <div className="text-[9px] text-ey-gray-dark mt-2 pt-2 border-t border-ey-navy-mid">v2.5.0 · FY 2024-25</div>
+          </div>
+        )}
+      </aside>
+
+      {/* ════════ MAIN ════════ */}
+      <div className={`flex-1 flex flex-col ${sidebarOpen?"ml-56":"ml-16"} transition-[margin] duration-200 ${contentRightPad}`} style={{minWidth:0, transitionProperty:"margin, padding"}}>
+        {/* Header */}
+        <header className="h-14 bg-white border-b border-ey-gray-mid flex items-center px-6 gap-3 sticky top-0 z-30 flex-shrink-0">
+          {/* Search */}
+          <div className="flex-1 max-w-md relative">
+            <input type="search" placeholder="Search returns, suppliers, GSTINs…"
+              className="w-full bg-ey-gray text-ey-charcoal placeholder-ey-gray-dark text-[13px] rounded-lg pl-9 pr-4 py-2 border border-transparent hover:border-ey-gray-mid focus:bg-white focus:border-ey-yellow"/>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-2.5 text-ey-gray-dark"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span className="absolute right-3 top-2 text-[10px] text-ey-gray-dark bg-white border border-ey-gray-mid rounded px-1.5 py-0.5">⌘K</span>
+          </div>
+
+          {/* Period selector */}
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] uppercase tracking-wider text-ey-gray-dark font-semibold">Period</label>
+            <select value={period} onChange={e=>setPeriod(e.target.value)}
+              className="bg-white border border-ey-gray-mid text-ey-charcoal text-[12px] font-medium rounded-lg px-3 py-1.5 cursor-pointer hover:border-ey-yellow">
+              {PERIOD_GROUPS.map((g,gi) => (
+                g.label ? (
+                  <optgroup key={gi} label={g.label}>{g.options.map(o=><option key={o} value={o}>{o}</option>)}</optgroup>
+                ) : g.options.map(o=><option key={o} value={o}>{o}</option>)
+              ))}
+            </select>
+          </div>
+
+          <div className="w-px h-6 bg-ey-gray-mid"/>
+
+          {/* AI shortcut when fullpage layout */}
+          {aiLayout === "fullpage" && (
+            <button onClick={()=>goNav("aiinsights")}
+              className="flex items-center gap-2 text-[12px] font-semibold bg-ey-navy hover:bg-ey-navy-light text-ey-yellow px-3 py-1.5 rounded-lg">
+              <span className="text-[10px]">✦</span> Open AI <span className="text-[9px] opacity-60">⌘/</span>
+            </button>
+          )}
+
+          {/* Generate report */}
+          <button onClick={()=>setReportModal(true)} className="flex items-center gap-2 bg-ey-yellow hover:bg-ey-yellow-dark text-ey-navy text-[12px] font-semibold px-3 py-1.5 rounded-lg">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg>
+            Export
+          </button>
+
+          {/* Notifications */}
+          <button className="relative p-2 rounded-lg hover:bg-ey-gray">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ey-charcoal"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a2 2 0 0 0 3.4 0"/></svg>
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+          </button>
+
+          <div className="w-7 h-7 rounded-full bg-ey-yellow flex items-center justify-center text-ey-navy font-bold text-[10px]">U1</div>
+        </header>
+
+        {/* Page body */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {/* Page header */}
+          <div className="flex items-end justify-between mb-5">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] text-ey-gray-dark mb-1">
+                <span>{COMPANY}</span><span>·</span>
+                <span className="font-mono">{GSTIN}</span><span>·</span>
+                <span>{STATE}</span>
+              </div>
+              <h1 className="text-[22px] font-semibold text-ey-charcoal tracking-tight">{NAV.find(n=>n.id===nav)?.label}{nav==="utilities" && " (Coming Soon..)"}</h1>
+              <p className="text-[13px] text-ey-gray-dark mt-1">{pageSubtitle(nav, period)}</p>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-ey-gray-dark">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+              <span>Last sync: {new Date().toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}</span>
+            </div>
+          </div>
+
+          {/* Active page */}
+          {nav==="dashboard"     && <DashboardPage     period={period} goNav={goNav} highlightId={highlightId} openInlineAI={()=>setAiOpen(true)} aiLayout={aiLayout}/>}
+          {nav==="docextract"    && <DocumentDropPage  goNav={goNav}/>}
+          {nav==="reconcile"     && <ReconcilePage     goNav={goNav} period={period}/>}
+          {nav==="notices"       && <NoticeDrafterPage goNav={goNav}/>}
+          {nav==="returnreports" && <ReturnReportsPage period={period} goNav={goNav} highlightId={highlightId} openInlineAI={()=>setAiOpen(true)} aiLayout={aiLayout}/>}
+          {nav==="returndash"    && <ReturnDashPage    period={period} openInlineAI={()=>setAiOpen(true)} aiLayout={aiLayout}/>}
+          {nav==="imsreport"     && <IMSPage           period={period} highlightId={highlightId} goNav={goNav} openInlineAI={()=>setAiOpen(true)} aiLayout={aiLayout}/>}
+          {nav==="ledgers"       && <LedgerPage        period={period} openInlineAI={()=>setAiOpen(true)} aiLayout={aiLayout}/>}
+          {nav==="einvoice"      && <EInvoicePage      openInlineAI={()=>setAiOpen(true)} aiLayout={aiLayout}/>}
+          {nav==="utilities"     && <UtilPage/>}
+          {nav==="aiinsights"    && <AIInsightsPage    chat={chat} onRefClick={onRefClick} onOpenKey={()=>setKeyModal(true)} goNav={goNav}/>}
+        </main>
+      </div>
+
+      {/* ════════ AI LAYOUT ════════ */}
+      {aiLayout === "bubble" && nav !== "aiinsights" && (
+        <AIBubbleLayout chat={chat} open={aiOpen} setOpen={setAiOpen} onRefClick={onRefClick} onOpenKey={()=>setKeyModal(true)}/>
+      )}
+      {aiLayout === "sidepanel" && nav !== "aiinsights" && (
+        <AISidePanelLayout chat={chat} open={aiOpen} setOpen={setAiOpen} onRefClick={onRefClick} onOpenKey={()=>setKeyModal(true)}/>
+      )}
+      {aiLayout === "inline" && nav !== "aiinsights" && (
+        <AIInlineModal chat={chat} open={aiOpen} onClose={()=>setAiOpen(false)} onRefClick={onRefClick} onOpenKey={()=>setKeyModal(true)} contextLabel={NAV.find(n=>n.id===nav)?.label}/>
+      )}
+      {/* fullpage: nothing here; AI lives on the AI Insights tab body */}
+
+      {/* ════════ REPORT MODAL ════════ */}
+      {reportModal && <ReportModal period={period} onClose={()=>setReportModal(false)}/>}
+
+      {/* ════════ API KEY MODAL ════════ */}
+      {keyModal && (
+        <div className="modal-ov" onClick={()=>setKeyModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 bg-ey-navy rounded-xl flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD400" strokeWidth="2"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 7.65-7.65M16 8l3 3M14 10l3 3"/></svg>
+              </div>
+              <div>
+                <h3 className="text-[15px] font-semibold text-ey-charcoal">Anthropic API key</h3>
+                <p className="text-[11px] text-ey-gray-dark">Stored in memory · never sent except to api.anthropic.com</p>
+              </div>
+            </div>
+            <div className="bg-ey-yellow-pale border border-yellow-200 rounded-lg p-3 mb-4 text-[11px] text-ey-charcoal leading-relaxed">
+              <strong>Without a key:</strong> 8 smart pre-built answers + word-by-word streaming.<br/>
+              <strong>With a key:</strong> Real Claude AI · streaming · any question.
+            </div>
+            <input type="password" value={keyInput} onChange={e=>setKeyInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&saveKey()}
+              placeholder="sk-ant-api03-..."
+              className="w-full border border-ey-gray-mid rounded-lg px-3 py-2.5 text-[12px] font-mono text-ey-charcoal focus:border-ey-yellow mb-2"/>
+            {keyErr && <p className="text-[11px] text-red-600 mb-3">Key must start with sk-ant-</p>}
+            <div className="flex gap-2 mt-2">
+              <button onClick={saveKey} className="flex-1 bg-ey-yellow hover:bg-ey-yellow-dark text-ey-navy font-semibold py-2.5 rounded-lg text-[12px]">Save & activate</button>
+              {window.__APIKEY && <button onClick={clearKey} className="px-4 border border-ey-gray-mid text-ey-charcoal py-2.5 rounded-lg text-[12px] hover:bg-ey-gray">Clear</button>}
+              <button onClick={()=>setKeyModal(false)} className="px-4 border border-ey-gray-mid text-ey-charcoal py-2.5 rounded-lg text-[12px] hover:bg-ey-gray">Cancel</button>
+            </div>
+            <p className="text-[10px] text-ey-gray-dark mt-3 text-center">Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">console.anthropic.com</a></p>
+          </div>
+        </div>
+      )}
+
+      {/* ════════ TWEAKS PANEL ════════ */}
+      <TweaksPanel>
+        <TweakSection label="AI assistant"/>
+        <TweakSelect label="Chat layout" value={t.aiLayout}
+          options={[
+            {value:"bubble",    label:"Floating bubble"},
+            {value:"sidepanel", label:"Side panel (persistent)"},
+            {value:"inline",    label:"Inline contextual"},
+            {value:"fullpage",  label:"Full-page (AI tab only)"}
+          ]}
+          onChange={v=>setTweak("aiLayout", v)}/>
+        <TweakToggle label="Briefing sparkline" value={t.showSparkBriefing} onChange={v=>setTweak("showSparkBriefing", v)}/>
+        <TweakSection label="Layout"/>
+        <TweakRadio label="Density" value={t.density} options={["compact","regular","comfy"]} onChange={v=>setTweak("density", v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+function pageSubtitle(nav, period){
+  // Page subtitle helper
+  const subs = {
+    dashboard:     `Overview of all GST activity · ${period}`,
+    docextract:    `Drop an invoice — AI extracts every field instantly`,
+    reconcile:     `Books vs GSTR-2A vs GSTR-2B mismatch detection · ${period}`,
+    notices:       `DRC-01B / DRC-01C intimations — auto-drafted Part B replies`,
+    returnreports: `Detailed register of every return filed · ${period}`,
+    returndash:    `Summary view grouped by return type · ${period}`,
+    imsreport:     `Supplier-level invoice management · ${period}`,
+    ledgers:       `Electronic credit ledger movement · ${period}`,
+    einvoice:      `IRN-backed invoice register · all periods`,
+    utilities:     `GST utilities & helper tools`,
+    aiinsights:    `Conversational AI over your live GST data`,
+  };
+  return subs[nav] || "";
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DigiGST — Print Export</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+<script>
+tailwind.config = {
+  theme:{
+    extend:{
+      colors:{
+        ey:{
+          yellow:"#FFD400","yellow-dark":"#E6BF00","yellow-light":"#FFF9CC","yellow-pale":"#FFFDE8",
+          navy:"#1A1A2E","navy-mid":"#2D2D4E","navy-light":"#3D3D5C",
+          gray:"#F5F5F3","gray-mid":"#E8E8E4","gray-dark":"#9B9B8E",
+          charcoal:"#2C2C2C"
+        }
+      },
+      fontFamily:{ sans:["IBM Plex Sans","sans-serif"], mono:["IBM Plex Mono","monospace"] }
+    }
+  }
+};
+</script>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;}
+  html,body{font-family:"IBM Plex Sans",sans-serif;background:#FFF;color:#2C2C2C}
+  table{border-collapse:separate;border-spacing:0}
+
+  /* Page sheets */
+  .sheet{
+    width:280mm;            /* landscape A4 minus margins */
+    min-height:188mm;
+    padding:10mm 12mm;
+    background:#FFF;
+    margin:0 auto 8mm;
+    page-break-after:always;
+    break-after:page;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+    position:relative;
+    overflow:hidden;
+  }
+  .sheet:last-child{page-break-after:auto;break-after:auto}
+  .sheet > section{break-inside:avoid}
+
+  .ph-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:6mm; margin-bottom:6mm; border-bottom:2px solid #FFD400;
+  }
+  .ph-head h1{font-size:18pt;font-weight:600;color:#1A1A2E;letter-spacing:-.01em}
+  .ph-head .sub{font-size:9pt;color:#9B9B8E;margin-top:1mm}
+  .ph-meta{font-size:8pt;color:#9B9B8E;text-align:right;font-family:"IBM Plex Mono",monospace}
+
+  /* Cover */
+  .cover{
+    background:#1A1A2E !important;
+    color:#FFF;
+    display:flex; flex-direction:column; justify-content:space-between;
+    min-height:188mm;
+  }
+  .cover .logo{
+    width:18mm;height:18mm;background:#FFD400;border-radius:3mm;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18pt;font-weight:700;color:#1A1A2E;
+  }
+  .cover h1{font-size:48pt;font-weight:700;letter-spacing:-.025em;line-height:1}
+  .cover h2{font-size:14pt;font-weight:400;color:#FFD400;margin-top:4mm;letter-spacing:.04em;text-transform:uppercase}
+  .cover .meta{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:6mm;
+    border-top:1px solid #2D2D4E; padding-top:6mm; margin-top:8mm;
+    font-size:9pt;
+  }
+  .cover .meta dt{color:#9B9B8E;text-transform:uppercase;letter-spacing:.06em;font-size:7.5pt;margin-bottom:1mm}
+  .cover .meta dd{color:#FFF;font-weight:500}
+
+  /* Tighter print typography */
+  body{font-size:9pt;line-height:1.4}
+  .text-\[22px\]{font-size:14pt !important}
+  .text-\[15px\],.text-\[14px\]{font-size:10pt !important}
+  .text-\[13px\]{font-size:9pt !important}
+  .text-\[12px\]{font-size:8.5pt !important}
+  .text-\[11px\]{font-size:8pt !important}
+  .text-\[10px\]{font-size:7pt !important}
+  .text-\[9px\]{font-size:6.5pt !important}
+
+  /* Cards & borders look better in print */
+  .rounded-xl,.rounded-2xl{border-radius:6px !important}
+  .shadow-sm,.shadow-md,.shadow-lg,.shadow-xl,.shadow-2xl{box-shadow:none !important}
+
+  /* Don't print the AI bubble, tweaks panel, sidebars, modals if they leak in */
+  .no-print, [data-tweaks-panel], .modal-ov, button:not(.keep-print){display:none !important}
+
+  /* Tables — force consistent borders & striping */
+  table thead{background:#F5F5F3 !important}
+  table tbody tr:nth-child(even){background:#FAFAF7 !important}
+  td,th{padding:2.2mm 3mm !important;font-size:8pt !important}
+  th{font-size:7pt !important;text-transform:uppercase;letter-spacing:.04em;color:#9B9B8E !important;font-weight:600}
+
+  /* Stat cards: smaller */
+  .stat-grid{display:grid;gap:3mm}
+
+  /* Footer line */
+  .ph-foot{
+    position:absolute;left:12mm;right:12mm;bottom:6mm;
+    display:flex;justify-content:space-between;align-items:center;
+    border-top:1px solid #E8E8E4;padding-top:3mm;
+    font-size:7pt;color:#9B9B8E;font-family:"IBM Plex Mono",monospace;
+  }
+
+  /* On screen, slate background so sheets look like cards */
+  @media screen { html,body{background:#E8E8E4;padding:8mm 0} }
+
+  @media print{
+    @page{ size: A4 landscape; margin: 8mm; }
+    html,body{background:#FFF;padding:0;margin:0}
+    .sheet{
+      width:auto !important; min-height:auto !important;
+      padding:0 !important; margin:0 !important;
+      box-shadow:none !important; page-break-after:always;
+    }
+    .sheet:last-child{page-break-after:auto}
+    .ph-foot{position:fixed;left:12mm;right:12mm;bottom:4mm}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="data.js"></script>
+<script type="text/babel" src="helpers.jsx"></script>
+
+<script type="text/babel">
+const {useMemo} = React;
+
+/* ── Page chrome ─────────────────────────────────── */
+function Sheet({title, subtitle, pageN, total, children, cover}){
+  return (
+    <section className={`sheet ${cover?"cover":""}`}>
+      {!cover && (
+        <header className="ph-head">
+          <div>
+            <h1>{title}</h1>
+            <div className="sub">{subtitle}</div>
+          </div>
+          <div className="ph-meta">
+            <div style={{fontWeight:600,color:"#1A1A2E"}}>DigiGST</div>
+            <div>{COMPANY}</div>
+            <div>{GSTIN}</div>
+          </div>
+        </header>
+      )}
+      {children}
+      {!cover && (
+        <footer className="ph-foot">
+          <span>EY DigiGST · Confidential</span>
+          <span>{pageN} / {total}</span>
+        </footer>
+      )}
+    </section>
+  );
+}
+
+/* ── Stat block ──────────────────────────────────── */
+function PrintStat({label, value, sub, accent}){
+  return (
+    <div style={{border:"1px solid #E8E8E4",borderRadius:6,padding:"3mm 4mm",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",left:0,top:0,bottom:0,width:"1.5mm",background:accent||"#FFD400"}}></div>
+      <div style={{fontSize:"7pt",color:"#9B9B8E",textTransform:"uppercase",letterSpacing:".05em",fontWeight:600}}>{label}</div>
+      <div style={{fontSize:"16pt",fontWeight:700,color:"#1A1A2E",fontFamily:"IBM Plex Mono",marginTop:"1mm",lineHeight:1}}>{value}</div>
+      <div style={{fontSize:"7.5pt",color:"#9B9B8E",marginTop:"1mm"}}>{sub}</div>
+    </div>
+  );
+}
+
+/* ── Aggregations ────────────────────────────────── */
+function summariseReturns(){
+  return {
+    total: RETURNS.length,
+    filed: RETURNS.filter(r=>r.status==="Filed").length,
+    pending: RETURNS.filter(r=>["Pending","Error","Draft"].includes(r.status)).length,
+    error: RETURNS.filter(r=>r.status==="Error").length,
+    tax: RETURNS.reduce((s,r)=>s+r.tax,0),
+    taxable: RETURNS.reduce((s,r)=>s+r.taxable,0),
+  };
+}
+
+/* ── Pages ───────────────────────────────────────── */
+function CoverSheet({total}){
+  return (
+    <Sheet cover>
+      <div>
+        <div className="logo">EY</div>
+        <h2 style={{marginTop:"30mm"}}>DigiGST Tax Platform · Compliance Report</h2>
+        <h1 style={{marginTop:"4mm"}}>{COMPANY}</h1>
+        <div style={{fontSize:"11pt",color:"#9B9B8E",marginTop:"3mm",fontFamily:"IBM Plex Mono"}}>GSTIN · {GSTIN}</div>
+
+        <div style={{display:"flex",gap:"3mm",marginTop:"14mm",flexWrap:"wrap"}}>
+          <span style={{background:"#FFD400",color:"#1A1A2E",padding:"2mm 4mm",borderRadius:"6px",fontSize:"8pt",fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>FY 2023-24 → 2024-25</span>
+          <span style={{background:"#2D2D4E",color:"#FFD400",padding:"2mm 4mm",borderRadius:"6px",fontSize:"8pt",fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>{STATE} · {SECTOR}</span>
+          <span style={{background:"#2D2D4E",color:"#FFF",padding:"2mm 4mm",borderRadius:"6px",fontSize:"8pt",fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>AI Score 87/100</span>
+        </div>
+      </div>
+
+      <dl className="meta">
+        <div><dt>Period</dt><dd>Oct 2023 — Apr 2024</dd></div>
+        <div><dt>Returns tracked</dt><dd>{RETURNS.length}</dd></div>
+        <div><dt>Suppliers (IMS)</dt><dd>{new Set(IMS.map(i=>i.gstin)).size}</dd></div>
+        <div><dt>Generated</dt><dd>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</dd></div>
+        <div><dt>Tax paid</dt><dd>{fmt(RETURNS.reduce((s,r)=>s+r.tax,0))}</dd></div>
+        <div><dt>ITC closing</dt><dd>{fmt(LEDGER[LEDGER.length-1]?.balance || 0)}</dd></div>
+        <div><dt>Anomalies</dt><dd>{ANOMALIES.length}</dd></div>
+        <div><dt>Document</dt><dd>{total} pages</dd></div>
+      </dl>
+    </Sheet>
+  );
+}
+
+function DashboardSheet({pageN, total}){
+  const s = summariseReturns();
+  const months = [
+    {l:"Oct '23", tax:213840, taxable:1188000},
+    {l:"Nov '23", tax:227160, taxable:1262000},
+    {l:"Dec '23", tax:251100, taxable:1395000},
+    {l:"Jan '24", tax:266400, taxable:1480000},
+    {l:"Feb '24", tax:292500, taxable:1625000},
+    {l:"Mar '24", tax:331200, taxable:1840000},
+    {l:"Apr '24", tax:353700, taxable:1965000, draft:true},
+  ];
+  const maxTaxable = Math.max(...months.map(m=>m.taxable));
+  const maxTax = Math.max(...months.map(m=>m.tax));
+
+  return (
+    <Sheet title="Dashboard" subtitle="Overview of all GST activity · Oct 2023 → Apr 2024" pageN={pageN} total={total}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:"3mm",marginBottom:"6mm"}}>
+        <PrintStat label="Total returns" value={s.total} sub="Tracked"/>
+        <PrintStat label="Filed" value={s.filed} sub={`${Math.round(s.filed/s.total*100)}% complete`} accent="#22c55e"/>
+        <PrintStat label="Pending/Error" value={s.pending} sub="Action needed" accent="#f59e0b"/>
+        <PrintStat label="Tax paid" value={fmt(s.tax)} sub="Net GST"/>
+        <PrintStat label="ITC balance" value="₹1.12L" sub="Apr 2024" accent="#3b82f6"/>
+        <PrintStat label="AI score" value="87" sub="↑4 vs last qtr" accent="#a855f7"/>
+      </div>
+
+      <div style={{border:"1px solid #E8E8E4",borderRadius:6,padding:"5mm",marginBottom:"5mm"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"4mm"}}>
+          <div>
+            <div style={{fontSize:"10pt",fontWeight:600,color:"#1A1A2E"}}>Monthly tax & turnover</div>
+            <div style={{fontSize:"7.5pt",color:"#9B9B8E"}}>7-month trend · Apr 2024 in draft</div>
+          </div>
+          <div style={{display:"flex",gap:"4mm",fontSize:"7pt"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"1.5mm"}}><span style={{width:8,height:8,background:"#E8E8E4",display:"inline-block"}}></span>Turnover</div>
+            <div style={{display:"flex",alignItems:"center",gap:"1.5mm"}}><span style={{width:8,height:8,background:"#FFD400",display:"inline-block"}}></span>Tax</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"flex-end",gap:"4mm",height:"34mm",paddingTop:"2mm"}}>
+          {months.map((m,i)=>(
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"1.5mm"}}>
+              <div style={{display:"flex",alignItems:"flex-end",gap:"1mm",height:"26mm",width:"100%",justifyContent:"center"}}>
+                <div style={{width:6,height:`${(m.taxable/maxTaxable)*26}mm`,background:"#E8E8E4"}}></div>
+                <div style={{width:6,height:`${(m.tax/maxTax)*26}mm`,background:m.draft?"#FFD400AA":"#FFD400",border:m.draft?"1px dashed #b08800":"none"}}></div>
+              </div>
+              <div style={{fontSize:"6.5pt",color:"#9B9B8E"}}>{m.l}</div>
+              <div style={{fontSize:"6.5pt",fontWeight:700,fontFamily:"IBM Plex Mono"}}>{fmt(m.tax)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4mm"}}>
+        {/* Due dates */}
+        <div style={{border:"1px solid #E8E8E4",borderRadius:6,padding:"4mm"}}>
+          <div style={{fontSize:"8pt",fontWeight:700,color:"#1A1A2E",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"3mm",borderLeft:"2px solid #FFD400",paddingLeft:"2mm"}}>Upcoming due dates</div>
+          {DUE_DATES.slice(0,5).map(d=>{
+            const overdue = d.days<0, urgent = !overdue && d.days<=7;
+            return (
+              <div key={d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"1.8mm 0",borderBottom:"1px solid #F5F5F3",fontSize:"8pt"}}>
+                <div>
+                  <div style={{fontWeight:700,fontFamily:"IBM Plex Mono"}}>{d.return}</div>
+                  <div style={{fontSize:"7pt",color:"#9B9B8E"}}>{d.period} · {d.due}</div>
+                </div>
+                <span style={{fontSize:"7pt",fontWeight:700,padding:"1mm 2mm",borderRadius:"3mm",
+                  background: overdue?"#fee2e2":urgent?"#fef3c7":"#dcfce7",
+                  color: overdue?"#991b1b":urgent?"#92400e":"#166534"
+                }}>{overdue?`${Math.abs(d.days)}d late`:`${d.days}d`}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* AI signals */}
+        <div style={{border:"1px solid #E8E8E4",borderRadius:6,padding:"4mm"}}>
+          <div style={{fontSize:"8pt",fontWeight:700,color:"#1A1A2E",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"3mm",borderLeft:"2px solid #FFD400",paddingLeft:"2mm"}}>AI signals</div>
+          {[
+            {t:"GSTR-4 Mar is overdue — file today", sev:"high"},
+            {t:"GSTR-3B Feb Error unresolved",        sev:"high"},
+            {t:"10 IMS invoices pending · ₹2.3L ITC", sev:"med"},
+            {t:"Mar compliance 87/100 — above avg",   sev:"ok"},
+          ].map((sig,i)=>(
+            <div key={i} style={{display:"flex",gap:"2mm",alignItems:"flex-start",padding:"1.5mm 2mm",fontSize:"8pt",borderRadius:"2mm",marginBottom:"1mm",
+              background: sig.sev==="high"?"#fef2f2":sig.sev==="med"?"#fffbeb":"#f0fdf4",
+              border: `1px solid ${sig.sev==="high"?"#fecaca":sig.sev==="med"?"#fde68a":"#bbf7d0"}`
+            }}>
+              <span style={{width:"1.5mm",height:"1.5mm",borderRadius:"50%",marginTop:"1.5mm",flexShrink:0,
+                background: sig.sev==="high"?"#ef4444":sig.sev==="med"?"#f59e0b":"#22c55e"
+              }}></span>
+              <span style={{color:sig.sev==="high"?"#7f1d1d":sig.sev==="med"?"#78350f":"#14532d"}}>{sig.t}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/* Status badge for tables */
+function SB({s}){
+  const cfg = {
+    Filed:{bg:"#dcfce7",fg:"#166534"}, Pending:{bg:"#fef3c7",fg:"#92400e"},
+    Processing:{bg:"#dbeafe",fg:"#1e40af"}, Error:{bg:"#fee2e2",fg:"#991b1b"},
+    Draft:{bg:"#f3f4f6",fg:"#374151"},
+  }[s] || {bg:"#f3f4f6",fg:"#374151"};
+  return <span style={{background:cfg.bg,color:cfg.fg,padding:"0.5mm 2mm",borderRadius:"2mm",fontSize:"7pt",fontWeight:700,textTransform:"uppercase",letterSpacing:".04em"}}>{s}</span>;
+}
+function RB({r}){
+  const cfg = { Low:{bg:"#dcfce7",fg:"#166534"}, Medium:{bg:"#fef3c7",fg:"#92400e"}, High:{bg:"#fee2e2",fg:"#991b1b"} }[r];
+  return <span style={{background:cfg.bg,color:cfg.fg,padding:"0.5mm 2mm",borderRadius:"2mm",fontSize:"7pt",fontWeight:700,textTransform:"uppercase"}}>{r}</span>;
+}
+
+function ReturnsSheet({pageN, total}){
+  return (
+    <Sheet title="GST Return Register" subtitle={`${RETURNS.length} returns · Oct 2023 → Apr 2024`} pageN={pageN} total={total}>
+      <table style={{width:"100%"}}>
+        <thead>
+          <tr style={{background:"#F5F5F3",borderBottom:"1px solid #E8E8E4"}}>
+            {["#","Return","Period","Status","Taxable","Tax","IGST","CGST","SGST","Updated","By"].map(h=>(
+              <th key={h} style={{textAlign:"left"}}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {RETURNS.map((r,i)=>(
+            <tr key={r.id} style={{borderBottom:"1px solid #F5F5F3",background:i%2?"#FAFAF7":"#FFF"}}>
+              <td style={{color:"#9B9B8E",fontFamily:"IBM Plex Mono"}}>{String(i+1).padStart(2,"0")}</td>
+              <td style={{fontWeight:700,fontFamily:"IBM Plex Mono"}}>{r.type}</td>
+              <td>{r.period}</td>
+              <td><SB s={r.status}/></td>
+              <td style={{fontFamily:"IBM Plex Mono",textAlign:"right"}}>{fmt(r.taxable)}</td>
+              <td style={{fontFamily:"IBM Plex Mono",textAlign:"right",fontWeight:600}}>{fmt(r.tax)}</td>
+              <td style={{fontFamily:"IBM Plex Mono",textAlign:"right",color:"#9B9B8E"}}>{fmt(r.igst)}</td>
+              <td style={{fontFamily:"IBM Plex Mono",textAlign:"right",color:"#9B9B8E"}}>{fmt(r.cgst)}</td>
+              <td style={{fontFamily:"IBM Plex Mono",textAlign:"right",color:"#9B9B8E"}}>{fmt(r.sgst)}</td>
+              <td style={{color:"#9B9B8E"}}>{r.updated}</td>
+              <td style={{color:"#9B9B8E"}}>{r.by}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Sheet>
+  );
+}
+
+function IMSSheet({pageN, total}){
+  return (
+    <Sheet title="Invoice Management System (IMS)" subtitle={`${IMS.length} supplier-period rows · ${new Set(IMS.map(i=>i.gstin)).size} unique GSTINs`} pageN={pageN} total={total}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"3mm",marginBottom:"5mm"}}>
+        <PrintStat label="Invoices" value={IMS.reduce((s,r)=>s+r.invoices,0)} sub="Total"/>
+        <PrintStat label="Eligible ITC" value={fmt(IMS.reduce((s,r)=>s+r.itc,0))} sub="Sum of rows" accent="#22c55e"/>
+        <PrintStat label="Pending action" value={IMS.reduce((s,r)=>s+r.pending,0)} sub="Invoices" accent="#f59e0b"/>
+        <PrintStat label="Rejected" value={IMS.reduce((s,r)=>s+r.rejected,0)} sub="Invoices" accent="#ef4444"/>
+      </div>
+      <table style={{width:"100%"}}>
+        <thead><tr style={{background:"#F5F5F3"}}>{["Supplier","GSTIN","Period","Inv","Elig","Pend","Rej","ITC","Risk"].map(h=><th key={h} style={{textAlign:"left"}}>{h}</th>)}</tr></thead>
+        <tbody>
+          {IMS.map((r,i)=>(
+            <tr key={r.id} style={{borderBottom:"1px solid #F5F5F3",background:i%2?"#FAFAF7":"#FFF"}}>
+              <td style={{fontWeight:700}}>{r.supplier}</td>
+              <td style={{fontFamily:"IBM Plex Mono",color:"#9B9B8E"}}>{r.gstin}</td>
+              <td>{r.period}</td>
+              <td style={{textAlign:"center",fontFamily:"IBM Plex Mono"}}>{r.invoices}</td>
+              <td style={{textAlign:"center",fontFamily:"IBM Plex Mono"}}>{r.eligible}</td>
+              <td style={{textAlign:"center",fontFamily:"IBM Plex Mono",color:r.pending>0?"#92400e":"#9B9B8E"}}>{r.pending||"—"}</td>
+              <td style={{textAlign:"center",fontFamily:"IBM Plex Mono",color:r.rejected>0?"#991b1b":"#9B9B8E"}}>{r.rejected||"—"}</td>
+              <td style={{textAlign:"right",fontFamily:"IBM Plex Mono",fontWeight:600,color:"#166534"}}>{fmt(r.itc)}</td>
+              <td><RB r={r.risk}/></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Sheet>
+  );
+}
+
+function LedgerSheet({pageN, total}){
+  const tc = LEDGER.reduce((s,l)=>s+l.credit,0);
+  const td = LEDGER.reduce((s,l)=>s+l.debit,0);
+  const bal = LEDGER[LEDGER.length-1]?.balance || 0;
+  return (
+    <Sheet title="Electronic Credit Ledger" subtitle="ITC movement · Jan 2024 → Apr 2024" pageN={pageN} total={total}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"3mm",marginBottom:"5mm"}}>
+        <PrintStat label="Total credits" value={fmt(tc)} sub="ITC received" accent="#22c55e"/>
+        <PrintStat label="Total debits" value={fmt(td)} sub="Offsets & reversals" accent="#ef4444"/>
+        <PrintStat label="Closing balance" value={fmt(bal)} sub="Available ITC" accent="#3b82f6"/>
+      </div>
+      <table style={{width:"100%"}}>
+        <thead><tr style={{background:"#F5F5F3"}}>{["Date","Description","Type","Debit","Credit","Balance"].map(h=><th key={h} style={{textAlign:"left"}}>{h}</th>)}</tr></thead>
+        <tbody>
+          {LEDGER.map((r,i)=>(
+            <tr key={i} style={{borderBottom:"1px solid #F5F5F3",background:r.type==="balance"?"#FFFDE8":(i%2?"#FAFAF7":"#FFF")}}>
+              <td style={{fontFamily:"IBM Plex Mono",color:"#9B9B8E"}}>{r.date}</td>
+              <td style={{fontWeight:r.type==="balance"?700:400}}>{r.desc}</td>
+              <td>
+                <span style={{
+                  padding:"0.5mm 2mm",borderRadius:"2mm",fontSize:"7pt",fontWeight:700,textTransform:"uppercase",
+                  background: r.type==="credit"?"#dcfce7":r.type==="debit"?"#fee2e2":"#dbeafe",
+                  color: r.type==="credit"?"#166534":r.type==="debit"?"#991b1b":"#1e40af"
+                }}>{r.type}</span>
+              </td>
+              <td style={{textAlign:"right",fontFamily:"IBM Plex Mono",color:"#991b1b",fontWeight:600}}>{r.debit>0?fmt(r.debit):"—"}</td>
+              <td style={{textAlign:"right",fontFamily:"IBM Plex Mono",color:"#166534",fontWeight:600}}>{r.credit>0?fmt(r.credit):"—"}</td>
+              <td style={{textAlign:"right",fontFamily:"IBM Plex Mono",fontWeight:700}}>{fmt(r.balance)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Sheet>
+  );
+}
+
+function EInvoiceSheet({pageN, total}){
+  return (
+    <Sheet title="E-Invoice Register" subtitle={`${EINVOICES.length} IRN-backed invoices · all periods`} pageN={pageN} total={total}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"3mm",marginBottom:"5mm"}}>
+        <PrintStat label="E-invoices" value={EINVOICES.length} sub="Issued"/>
+        <PrintStat label="Active" value={EINVOICES.filter(i=>i.status==="Active").length} sub="Valid IRNs" accent="#22c55e"/>
+        <PrintStat label="Total value" value={fmt(EINVOICES.reduce((s,i)=>s+i.value,0))} sub="Sum of invoices"/>
+      </div>
+      <table style={{width:"100%"}}>
+        <thead><tr style={{background:"#F5F5F3"}}>{["IRN","Date","Buyer","GSTIN","Value","Status"].map(h=><th key={h} style={{textAlign:"left"}}>{h}</th>)}</tr></thead>
+        <tbody>
+          {EINVOICES.map((r,i)=>(
+            <tr key={i} style={{borderBottom:"1px solid #F5F5F3",background:i%2?"#FAFAF7":"#FFF"}}>
+              <td style={{fontFamily:"IBM Plex Mono",color:"#1e40af"}}>{r.irn}</td>
+              <td>{r.date}</td>
+              <td style={{fontWeight:700}}>{r.buyer}</td>
+              <td style={{fontFamily:"IBM Plex Mono",color:"#9B9B8E"}}>{r.gstin}</td>
+              <td style={{textAlign:"right",fontFamily:"IBM Plex Mono",fontWeight:600}}>{fmt(r.value)}</td>
+              <td>
+                <span style={{padding:"0.5mm 2mm",borderRadius:"2mm",fontSize:"7pt",fontWeight:700,textTransform:"uppercase",
+                  background:r.status==="Active"?"#dcfce7":"#fee2e2",
+                  color:r.status==="Active"?"#166534":"#991b1b"}}>{r.status}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Sheet>
+  );
+}
+
+function AnomalySheet({pageN, total}){
+  return (
+    <Sheet title="AI Insights — Detected Anomalies" subtitle={`${ANOMALIES.length} items auto-detected from compliance data`} pageN={pageN} total={total}>
+      <div style={{display:"grid",gap:"3mm"}}>
+        {ANOMALIES.map(a=>{
+          const sev = a.severity;
+          const tone = sev==="High"?{bg:"#fef2f2",bd:"#fecaca",fg:"#7f1d1d"}:sev==="Medium"?{bg:"#fffbeb",bd:"#fde68a",fg:"#78350f"}:{bg:"#f9fafb",bd:"#e5e7eb",fg:"#374151"};
+          return (
+            <div key={a.id} style={{border:`1px solid ${tone.bd}`,background:tone.bg,borderRadius:6,padding:"4mm"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"2mm"}}>
+                <div>
+                  <div style={{fontSize:"10pt",fontWeight:700,color:tone.fg}}>{a.type}</div>
+                  <div style={{fontSize:"7.5pt",color:"#9B9B8E",fontFamily:"IBM Plex Mono",marginTop:"0.5mm"}}>Period · {a.period}</div>
+                </div>
+                <span style={{
+                  fontSize:"7pt",fontWeight:700,padding:"1mm 2.5mm",borderRadius:"3mm",letterSpacing:".06em",textTransform:"uppercase",
+                  background:sev==="High"?"#fee2e2":sev==="Medium"?"#fef3c7":"#f3f4f6",
+                  color:sev==="High"?"#991b1b":sev==="Medium"?"#92400e":"#374151"
+                }}>{sev}</span>
+              </div>
+              <div style={{fontSize:"9pt",color:"#2C2C2C",marginBottom:"2mm"}}>{a.desc}</div>
+              <div style={{fontSize:"8pt",color:tone.fg,fontStyle:"italic",borderTop:`1px dashed ${tone.bd}`,paddingTop:"2mm"}}>
+                <strong style={{textTransform:"uppercase",letterSpacing:".05em",fontStyle:"normal",fontSize:"7pt"}}>Action · </strong>{a.action}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Sheet>
+  );
+}
+
+/* ── App ─────────────────────────────────────────── */
+function PrintApp(){
+  const sheets = [
+    <DashboardSheet/>, <ReturnsSheet/>, <IMSSheet/>, <LedgerSheet/>, <EInvoiceSheet/>, <AnomalySheet/>
+  ];
+  const total = sheets.length;
+  return (
+    <>
+      <CoverSheet total={total+1}/>
+      {sheets.map((el,i)=> React.cloneElement(el, {key:i, pageN:i+1, total}))}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<PrintApp/>);
+
+/* Auto-print after fonts + Babel ready */
+(async () => {
+  try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+  await new Promise(r => setTimeout(r, 700));
+  window.print();
+})();
+</script>
+</body>
+</html>

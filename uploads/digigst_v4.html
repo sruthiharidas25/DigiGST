@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DigiGST – EY Tax Platform</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config={theme:{extend:{colors:{ey:{yellow:'#FFD400','yellow-dark':'#E6BF00','yellow-light':'#FFF9CC','yellow-pale':'#FFFDE8',navy:'#1A1A2E','navy-mid':'#2D2D4E','navy-light':'#3D3D5C',gray:'#F5F5F3','gray-mid':'#E8E8E4','gray-dark':'#9B9B8E',charcoal:'#2C2C2C'}},fontFamily:{sans:['IBM Plex Sans','sans-serif'],mono:['IBM Plex Mono','monospace']}}}}
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:#F5F5F3}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#f1f1f1}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+.snav{transition:all .15s ease;cursor:pointer}
+.snav:hover{background:rgba(255,212,0,.12)}
+.snav.active{background:rgba(255,212,0,.18);border-left:3px solid #FFD400!important}
+.snav.flash{animation:navFlash 1.8s ease}
+@keyframes navFlash{0%,100%{background:transparent}30%,70%{background:rgba(255,212,0,.35)}}
+.trh:hover{background:#FFFBE6}
+.modal-ov{position:fixed;inset:0;background:rgba(26,26,46,.6);z-index:9998;display:flex;align-items:center;justify-content:center}
+.chat-win{position:fixed;bottom:88px;right:24px;width:420px;max-height:620px;z-index:9997;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(26,26,46,.25),0 0 0 1px rgba(255,212,0,.15)}
+.bub-user{background:#FFD400;color:#1A1A2E;border-radius:18px 18px 4px 18px;max-width:75%}
+.bub-bot{background:#fff;color:#1A1A2E;border:1px solid #E8E8E4;border-radius:4px 18px 18px 18px;max-width:88%}
+.bub-ai{background:#1A1A2E;color:#fff;border-radius:4px 18px 18px 18px;max-width:88%}
+.bub-system{background:linear-gradient(135deg,#FFF9CC,#FFFDE8);color:#1A1A2E;border:1px solid #FFD400;border-radius:12px;max-width:95%;width:100%}
+.pulse{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.scard{background:white;border:1px solid #E8E8E4;border-radius:12px;padding:18px 20px;position:relative;overflow:hidden}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:#FFD400}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-filed{background:#DCFCE7;color:#166534}
+.badge-pending{background:#FEF9C3;color:#854D0E}
+.badge-proc{background:#DBEAFE;color:#1E40AF}
+.badge-err{background:#FEE2E2;color:#991B1B}
+.badge-draft{background:#F3F4F6;color:#374151}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:#FFD400;animation:aiDot 1.2s infinite;display:inline-block}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes aiDot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.tab-btn{padding:5px 14px;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;border:none;background:transparent;color:#9B9B8E}
+.tab-btn.active{background:#FFD400;color:#1A1A2E}
+.tab-btn:not(.active):hover{background:#F5F5F3;color:#2C2C2C}
+.suggestion-chip{font-size:11px;background:#F0F9FF;border:1px solid #BAE6FD;color:#0369A1;padding:5px 10px;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.suggestion-chip:hover{background:#E0F2FE;border-color:#7DD3FC}
+.urgency-high{border-left:3px solid #EF4444}
+.urgency-med{border-left:3px solid #F59E0B}
+.urgency-low{border-left:3px solid #22C55E}
+input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px rgba(255,212,0,.4)}
+@media(max-width:768px){.sidebar-text{display:none!important}.sw{width:56px!important}.mw{margin-left:56px!important}}
+.thinking-bar{height:3px;background:linear-gradient(90deg,#FFD400 0%,#E6BF00 50%,#FFD400 100%);background-size:200% 100%;animation:thinkBar 1.5s linear infinite}
+@keyframes thinkBar{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect,useMemo,useCallback}=React;
+
+/* ══════════════════════════════════════════
+   DATA LAYER — full company context
+══════════════════════════════════════════ */
+const COMPANY="Acme Enterprises Pvt. Ltd.";
+const GSTIN="27AABCU9603R1ZX";
+const STATE="Maharashtra";
+const SECTOR="Manufacturing";
+
+const RETURNS=[
+  {id:1,type:"GSTR-1",period:"Mar 2024",status:"Filed",updated:"11 Apr 2024",by:"R. Sharma",taxable:1840000,tax:331200,igst:165600,cgst:82800,sgst:82800,late:false},
+  {id:2,type:"GSTR-3B",period:"Mar 2024",status:"Filed",updated:"20 Apr 2024",by:"K. Mehta",taxable:1840000,tax:331200,igst:165600,cgst:82800,sgst:82800,late:false},
+  {id:3,type:"GSTR-2A",period:"Mar 2024",status:"Processing",updated:"03 Apr 2024",by:"Auto",taxable:920000,tax:165600,igst:83000,cgst:41300,sgst:41300,late:false},
+  {id:4,type:"GSTR-2B",period:"Mar 2024",status:"Processing",updated:"14 Apr 2024",by:"Auto",taxable:920000,tax:165600,igst:83000,cgst:41300,sgst:41300,late:false},
+  {id:5,type:"GSTR-7",period:"Mar 2024",status:"Filed",updated:"10 Apr 2024",by:"V. Bose",taxable:45000,tax:8100,igst:0,cgst:4050,sgst:4050,late:false},
+  {id:6,type:"GSTR-6",period:"Mar 2024",status:"Filed",updated:"13 Apr 2024",by:"S. Nair",taxable:380000,tax:68400,igst:34200,cgst:17100,sgst:17100,late:false},
+  {id:7,type:"GSTR-4",period:"Mar 2024",status:"Draft",updated:"30 Mar 2024",by:"A. Gupta",taxable:0,tax:0,igst:0,cgst:0,sgst:0,late:false},
+  {id:8,type:"CMP-08",period:"Q4 FY24",status:"Pending",updated:"—",by:"—",taxable:0,tax:0,igst:0,cgst:0,sgst:0,late:true},
+  {id:9,type:"GSTR-1",period:"Feb 2024",status:"Filed",updated:"11 Mar 2024",by:"R. Sharma",taxable:1625000,tax:292500,igst:146250,cgst:73125,sgst:73125,late:false},
+  {id:10,type:"GSTR-3B",period:"Feb 2024",status:"Error",updated:"10 Mar 2024",by:"K. Mehta",taxable:1625000,tax:292500,igst:146250,cgst:73125,sgst:73125,late:false},
+  {id:11,type:"GSTR-2A",period:"Feb 2024",status:"Filed",updated:"28 Feb 2024",by:"Auto",taxable:810000,tax:145800,igst:72900,cgst:36450,sgst:36450,late:false},
+  {id:12,type:"GSTR-2B",period:"Feb 2024",status:"Filed",updated:"14 Mar 2024",by:"Auto",taxable:810000,tax:145800,igst:72900,cgst:36450,sgst:36450,late:false},
+  {id:13,type:"GSTR-7",period:"Feb 2024",status:"Filed",updated:"10 Mar 2024",by:"V. Bose",taxable:41000,tax:7380,igst:0,cgst:3690,sgst:3690,late:false},
+  {id:14,type:"GSTR-6",period:"Feb 2024",status:"Filed",updated:"13 Mar 2024",by:"S. Nair",taxable:335000,tax:60300,igst:30150,cgst:15075,sgst:15075,late:false},
+  {id:15,type:"GSTR-4",period:"Feb 2024",status:"Filed",updated:"18 Mar 2024",by:"A. Gupta",taxable:120000,tax:21600,igst:10800,cgst:5400,sgst:5400,late:false},
+  {id:16,type:"CMP-08",period:"Q3 FY24",status:"Filed",updated:"18 Jan 2024",by:"A. Gupta",taxable:96000,tax:17280,igst:8640,cgst:4320,sgst:4320,late:false},
+];
+
+const IMS=[
+  {id:1,supplier:"TechParts India Ltd",gstin:"29AABCT1234A1Z5",invoices:24,eligible:18,pending:4,rejected:2,itc:145600,period:"Mar 2024",risk:"Medium"},
+  {id:2,supplier:"Bharat Steel Corp",gstin:"24AABCB5678B1Z3",invoices:12,eligible:12,pending:0,rejected:0,itc:89400,period:"Mar 2024",risk:"Low"},
+  {id:3,supplier:"Mumbai Logistics Co",gstin:"27AABCM9012C1Z1",invoices:36,eligible:30,pending:5,rejected:1,itc:62300,period:"Mar 2024",risk:"Medium"},
+  {id:4,supplier:"Delhi Chemical Works",gstin:"07AABCD3456D1Z9",invoices:8,eligible:6,pending:0,rejected:2,itc:38700,period:"Mar 2024",risk:"High"},
+  {id:5,supplier:"Rajasthan Textiles",gstin:"08AABCR7890E1Z7",invoices:19,eligible:19,pending:0,rejected:0,itc:28100,period:"Mar 2024",risk:"Low"},
+  {id:6,supplier:"TechParts India Ltd",gstin:"29AABCT1234A1Z5",invoices:22,eligible:20,pending:2,rejected:0,itc:131200,period:"Feb 2024",risk:"Low"},
+  {id:7,supplier:"Bharat Steel Corp",gstin:"24AABCB5678B1Z3",invoices:10,eligible:10,pending:0,rejected:0,itc:76500,period:"Feb 2024",risk:"Low"},
+  {id:8,supplier:"Mumbai Logistics Co",gstin:"27AABCM9012C1Z1",invoices:28,eligible:22,pending:6,rejected:0,itc:54800,period:"Feb 2024",risk:"Medium"},
+];
+
+const LEDGER=[
+  {date:"01 Mar 2024",desc:"Opening Balance",type:"balance",debit:0,credit:0,balance:285400},
+  {date:"05 Mar 2024",desc:"IGST Credit – TechParts Invoice",type:"credit",debit:0,credit:48200,balance:333600},
+  {date:"08 Mar 2024",desc:"CGST Credit – Bharat Steel",type:"credit",debit:0,credit:22100,balance:355700},
+  {date:"15 Mar 2024",desc:"GSTR-3B Liability Offset",type:"debit",debit:180000,credit:0,balance:175700},
+  {date:"18 Mar 2024",desc:"SGST Credit – Mumbai Logistics",type:"credit",debit:0,credit:31200,balance:206900},
+  {date:"22 Mar 2024",desc:"ITC Reversal – Rule 42",type:"debit",debit:8400,credit:0,balance:198500},
+  {date:"28 Mar 2024",desc:"Late fee payment (CMP-08)",type:"debit",debit:1000,credit:0,balance:197500},
+  {date:"31 Mar 2024",desc:"Closing Balance",type:"balance",debit:0,credit:0,balance:197500},
+  {date:"01 Feb 2024",desc:"Opening Balance",type:"balance",debit:0,credit:0,balance:312100},
+  {date:"06 Feb 2024",desc:"IGST Credit – TechParts Invoice",type:"credit",debit:0,credit:43800,balance:355900},
+  {date:"12 Feb 2024",desc:"GSTR-3B Liability Offset",type:"debit",debit:165000,credit:0,balance:190900},
+  {date:"20 Feb 2024",desc:"CGST Credit – Bharat Steel",type:"credit",debit:0,credit:19200,balance:210100},
+  {date:"28 Feb 2024",desc:"Closing Balance",type:"balance",debit:0,credit:0,balance:285400},
+];
+
+const DUE_DATES=[
+  {return:"GSTR-7",due:"10 May 2024",days:4,filed:false,urgency:"high"},
+  {return:"GSTR-1",due:"11 May 2024",days:5,filed:false,urgency:"high"},
+  {return:"GSTR-2B",due:"14 May 2024",days:8,filed:true,urgency:"low"},
+  {return:"GSTR-3B",due:"20 May 2024",days:14,filed:false,urgency:"med"},
+  {return:"GSTR-9",due:"31 Dec 2024",days:239,filed:false,urgency:"low"},
+];
+
+const ANOMALIES=[
+  {type:"Mismatch",desc:"GSTR-3B vs GSTR-1 turnover gap: ₹2,15,000",period:"Feb 2024",severity:"High",action:"Reconcile and file amendment before next filing"},
+  {type:"IMS Pending",desc:"4 invoices from TechParts + 5 from Mumbai Logistics pending acceptance",period:"Mar 2024",severity:"Medium",action:"Accept or reject in IMS to claim ITC"},
+  {type:"Late Filing",desc:"CMP-08 filed 3 days after due date",period:"Q4 FY24",severity:"Low",action:"Late fee ₹1,000 already paid"},
+  {type:"ITC Reversal",desc:"Rule 42 proportionate reversal due on mixed supply inputs",period:"Mar 2024",severity:"Medium",action:"Calculate & reverse before GSTR-3B filing"},
+  {type:"GSTR-4 Draft",desc:"Composition dealer return still in Draft state",period:"Mar 2024",severity:"High",action:"File immediately — due date approaching"},
+];
+
+/* ── Build full data context string for AI ── */
+function buildContext(){
+  const filed=RETURNS.filter(r=>r.status==="Filed").length;
+  const pending=RETURNS.filter(r=>["Pending","Error","Draft"].includes(r.status)).length;
+  const totalTax=RETURNS.reduce((s,r)=>s+r.tax,0);
+  const marTax=RETURNS.filter(r=>r.period==="Mar 2024").reduce((s,r)=>s+r.tax,0);
+  const febTax=RETURNS.filter(r=>r.period==="Feb 2024").reduce((s,r)=>s+r.tax,0);
+  const itcBalance=197500;
+  const pendingIMS=IMS.filter(r=>r.pending>0);
+  const totalPendingITC=pendingIMS.reduce((s,r)=>s+r.itc,0);
+  const highRiskSuppliers=IMS.filter(r=>r.risk==="High").map(r=>r.supplier);
+  const pendingDues=DUE_DATES.filter(d=>!d.filed&&d.days<=14);
+
+  return `
+COMPANY CONTEXT:
+- Company: ${COMPANY}
+- GSTIN: ${GSTIN} | State: ${STATE} | Sector: ${SECTOR}
+- Financial Year: 2023-24
+
+RETURNS SUMMARY:
+- Total returns tracked: ${RETURNS.length} (across Feb 2024 and Mar 2024)
+- Filed: ${filed}, Pending/Error/Draft: ${pending}
+- Total tax paid (both months): ₹${totalTax.toLocaleString('en-IN')}
+- Mar 2024 tax: ₹${marTax.toLocaleString('en-IN')} | Feb 2024 tax: ₹${febTax.toLocaleString('en-IN')}
+- Tax grew ${(((marTax-febTax)/febTax)*100).toFixed(1)}% MoM
+
+SPECIFIC RETURN STATUSES:
+${RETURNS.map(r=>`- ${r.type} (${r.period}): ${r.status}, tax: ₹${r.tax.toLocaleString('en-IN')}, filed by: ${r.by}`).join('\n')}
+
+ITC / LEDGER:
+- Current ITC balance: ₹${itcBalance.toLocaleString('en-IN')} (Mar 2024 closing)
+- Feb 2024 closing balance was: ₹2,85,400
+- ITC dropped from Feb to Mar because of ₹1,80,000 liability offset + ₹8,400 Rule 42 reversal
+- Total ITC at risk from pending IMS invoices: ₹${totalPendingITC.toLocaleString('en-IN')}
+- Suppliers with pending IMS actions: ${pendingIMS.map(r=>r.supplier+" ("+r.pending+" invoices, ₹"+r.itc.toLocaleString('en-IN')+" ITC)").join(', ')}
+
+IMS SUPPLIER RISK:
+${IMS.map(r=>`- ${r.supplier} (${r.period}): ${r.invoices} invoices, ${r.eligible} eligible, ${r.pending} pending, ${r.rejected} rejected, ITC: ₹${r.itc.toLocaleString('en-IN')}, risk: ${r.risk}`).join('\n')}
+- High risk suppliers: ${highRiskSuppliers.join(', ')||'None'}
+
+ANOMALIES DETECTED:
+${ANOMALIES.map(a=>`- [${a.severity}] ${a.type}: ${a.desc} (${a.period}) — Action: ${a.action}`).join('\n')}
+
+UPCOMING DUE DATES:
+${DUE_DATES.map(d=>`- ${d.return}: due ${d.due}, ${d.days} days away, ${d.filed?'FILED':'NOT FILED'}`).join('\n')}
+- URGENT: ${pendingDues.map(d=>d.return).join(', ')} due within 14 days
+
+COMPLIANCE METRICS:
+- Compliance score: 87/100 (up 4 pts vs last quarter)
+- GSTR-3B mismatch with GSTR-1 in Feb: ₹2,15,000 gap
+- One return (GSTR-3B Feb) in Error state — needs correction
+- GSTR-4 Mar 2024 still in Draft — not filed
+- Cash outflow for next 14 days if all pending returns filed: ~₹1,20,000 estimated liability
+`;
+}
+
+/* ── Suggested smart questions ── */
+const SMART_QUESTIONS=[
+  {text:"What needs my attention today?",icon:"☀️"},
+  {text:"Am I ready to file GSTR-3B?",icon:"✅"},
+  {text:"Why did ITC drop in March?",icon:"📉"},
+  {text:"Which supplier is riskiest?",icon:"⚠️"},
+  {text:"How much cash do I need this week?",icon:"💰"},
+  {text:"Explain the Feb GSTR-3B error",icon:"🔍"},
+  {text:"Summarise March compliance",icon:"📊"},
+  {text:"What would improve my score?",icon:"🎯"},
+];
+
+/* ── Local smart fallback (no API key needed) ── */
+function localAnswer(question){
+  const q=question.toLowerCase();
+  if(q.includes("attention")||q.includes("urgent")||q.includes("today")||q.includes("morning")){
+    return `☀️ **Morning Briefing — 3 Urgent Actions**
+
+🔴 **1. File GSTR-4 (Mar 2024) — TODAY**
+Still in Draft. Due date is approaching. Takes ~5 minutes. Go to Return Reports → GSTR-4.
+
+🟡 **2. Resolve GSTR-3B Error (Feb 2024)**
+Filed by K. Mehta with an error. Turnover gap of ₹2,15,000 vs GSTR-1. Needs amendment before next month's 3B.
+
+🟡 **3. Action 9 Pending IMS Invoices**
+TechParts (4 invoices) + Mumbai Logistics (5 invoices). ₹2,07,900 ITC at risk if not accepted. Go to IMS Report.
+
+⚡ **Quick Win (< 5 mins):** Accept Bharat Steel Corp invoices in IMS — already eligible, zero pending, just needs confirmation to lock in ₹89,400 ITC.`;
+  }
+  if(q.includes("gstr-3b")||q.includes("ready to file")||q.includes("3b")){
+    return `**GSTR-3B Filing Readiness Check**
+
+🔴 Not ready yet. Here's why:
+
+• **GSTR-2B still Processing** (Mar 2024) — wait for it to finalise before claiming ITC in 3B
+• **9 IMS invoices pending** — TechParts & Mumbai Logistics. Accept or reject them first to get correct ITC figure
+• **Rule 42 reversal** of ₹8,400 needs to be reflected in 3B
+• **GSTR-1 Mar** is Filed ✓ — that's good, 3B turnover must match
+
+Once 2B is ready and IMS is cleared, you can file. Estimated liability after ITC offset: ~₹1,33,700 cash payment.`;
+  }
+  if(q.includes("itc")||q.includes("drop")||q.includes("credit")){
+    return `**Why ITC Dropped Feb → Mar**
+
+Feb closing balance: ₹2,85,400
+Mar closing balance: ₹1,97,500
+**Drop: ₹87,900**
+
+Three reasons:
+1. **₹1,80,000** GSTR-3B liability offset on 15 Mar (largest outflow)
+2. **₹8,400** Rule 42 proportionate reversal on mixed supply inputs (22 Mar)
+3. **₹1,000** late fee paid for CMP-08 (28 Mar)
+
+Credits received in Mar: ₹48,200 (TechParts IGST) + ₹22,100 (Bharat Steel CGST) + ₹31,200 (Mumbai Logistics SGST) = ₹1,01,500 total credits.
+
+⚠️ Additional ₹2,07,900 ITC still locked in pending IMS invoices.`;
+  }
+  if(q.includes("supplier")||q.includes("risk")||q.includes("risky")){
+    return `**Supplier Risk Ranking**
+
+🔴 **1. Delhi Chemical Works** — HIGH RISK
+2 out of 8 invoices rejected (25% rejection rate). ₹38,700 ITC. Highest rejection rate across all suppliers. Recommend: verify GSTIN status and invoice details before accepting.
+
+🟡 **2. TechParts India Ltd** — MEDIUM RISK  
+4 pending + 2 rejected across Mar 2024. ₹1,45,600 ITC at stake. Largest ITC supplier — needs priority action.
+
+🟡 **3. Mumbai Logistics Co** — MEDIUM RISK
+5 pending in Mar + 6 in Feb. Pattern of slow acceptance. ₹62,300 ITC (Mar) pending.
+
+🟢 **Safe:** Bharat Steel Corp & Rajasthan Textiles — zero pending, zero rejections.`;
+  }
+  if(q.includes("cash")||q.includes("pay")||q.includes("week")||q.includes("money")){
+    return `**Cash Requirement — Next 2 Weeks**
+
+Upcoming filings and estimated cash outflow:
+
+| Return | Due | Est. Cash |
+|--------|-----|-----------|
+| GSTR-7 | 10 May | ₹8,100 |
+| GSTR-1 | 11 May | ₹0 (no cash) |
+| GSTR-3B | 20 May | ~₹1,33,700 |
+
+**Total cash needed: ~₹1,41,800**
+
+Current ITC balance: ₹1,97,500 — enough to offset GSTR-3B liability fully if IMS invoices are accepted in time.
+
+💡 **Recommendation:** Accept the 9 pending IMS invoices now to lock in ₹2,07,900 additional ITC before filing 3B. You could potentially file with ₹0 cash outflow.`;
+  }
+  if(q.includes("feb")||q.includes("february")||q.includes("error")){
+    return `**GSTR-3B Feb 2024 — Error Explained**
+
+Filed by K. Mehta on 10 Mar 2024 but currently shows **Error** status.
+
+**Likely cause:** Turnover mismatch between GSTR-1 and GSTR-3B.
+• GSTR-1 (Feb) reported taxable value: ₹1,62,50,000
+• GSTR-3B (Feb) reported: ₹1,62,50,000
+• Gap flagged by GST portal: ₹2,15,000
+
+**What to do:**
+1. Download the error JSON from GST portal
+2. Identify which invoice caused the discrepancy
+3. File GSTR-1 amendment (if invoice was omitted)
+4. Then refile GSTR-3B or file GSTR-3B amendment
+
+⚠️ This must be resolved before filing Mar 2024 GSTR-3B to avoid scrutiny.`;
+  }
+  if(q.includes("march")||q.includes("mar")||q.includes("summarise")||q.includes("summary")){
+    return `**March 2024 Compliance Summary**
+
+📊 **Returns:** 8 tracked, 5 Filed, 1 Draft (GSTR-4), 2 Processing (2A, 2B)
+
+💰 **Tax paid:** ₹3,31,200 (↑13.2% vs Feb's ₹2,92,500)
+• IGST: ₹1,65,600 | CGST: ₹82,800 | SGST: ₹82,800
+
+📥 **ITC position:** ₹1,97,500 closing balance
+• Credits received: ₹1,01,500
+• Liabilities offset: ₹1,80,000
+• Rule 42 reversal: ₹8,400
+
+⚠️ **Open items:**
+• GSTR-4 in Draft — not filed
+• CMP-08 late fee paid (₹1,000)
+• 9 IMS invoices pending action
+
+✅ **Score: 87/100** — above industry average for manufacturing sector.`;
+  }
+  if(q.includes("score")||q.includes("improve")||q.includes("better")||q.includes("95")||q.includes("100")){
+    return `**How to Improve Compliance Score (87 → 95+)**
+
+Current deductions:
+• **-5 pts** GSTR-3B Feb Error unresolved
+• **-3 pts** GSTR-4 Mar 2024 in Draft (not filed)
+• **-3 pts** CMP-08 late filing
+• **-2 pts** IMS pending invoices > 30 days
+
+**Action plan to reach 95+:**
+
+1. **File GSTR-4 Mar 2024** → +3 pts immediately
+2. **Resolve GSTR-3B Feb error** → +5 pts (biggest gain)
+3. **Clear all IMS pending invoices** → +2 pts
+4. **File all future returns 2 days early** → prevents late penalties
+
+Doing items 1 + 2 alone gets you to **95/100** within this week.`;
+  }
+  // Generic fallback
+  return `I can answer questions about your GST data without an API key. Try asking:
+
+• "What needs my attention today?"
+• "Am I ready to file GSTR-3B?"
+• "Why did ITC drop in March?"
+• "Which supplier is riskiest?"
+• "How much cash do I need this week?"
+• "Explain the Feb GSTR-3B error"
+• "Summarise March compliance"
+• "What would improve my score?"
+
+For open-ended questions, add your Anthropic API key using the 🔑 button to enable full Claude AI.`;
+}
+
+/* ── AI call (key stored in memory only) ── */
+window.__APIKEY = window.__APIKEY || "";
+
+async function callAI(messages){
+  if(!window.__APIKEY){
+    throw new Error("NO_KEY");
+  }
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key": window.__APIKEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:1000,
+      system:`You are the DigiGST AI assistant — a senior GST compliance expert embedded inside the DigiGST platform for ${COMPANY}.
+
+You have FULL ACCESS to the company's live GST data (returns, ITC ledger, IMS records, anomalies, due dates). Use this data to give specific, accurate, actionable answers. Never say you don't have access to data.
+
+RESPONSE RULES:
+- Always reference specific numbers, supplier names, return types, and dates from the data
+- Be conversational but precise — like a CA who knows the file inside out
+- Use short paragraphs or bullet points, keep under 180 words
+- For urgent issues, lead with the most critical item first
+- When recommending actions, be specific: "File GSTR-4 Mar 2024 before 11 May" not "file pending returns"
+- Format numbers in Indian style (₹1,97,500 not ₹197500)
+- Never make up data that isn't in the context provided
+
+CURRENT DATA CONTEXT:
+${buildContext()}`,
+      messages
+    })
+  });
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    throw new Error(err?.error?.message||`HTTP ${res.status}`);
+  }
+  const data=await res.json();
+  return data.content?.[0]?.text||"Unable to get response. Please try again.";
+}
+
+/* ── helpers ── */
+const fmt=n=>n>=100000?`₹${(n/100000).toFixed(2)}L`:`₹${n.toLocaleString('en-IN')}`;
+function SBadge({s}){
+  const m={Filed:"badge-filed",Pending:"badge-pending",Processing:"badge-proc",Error:"badge-err",Draft:"badge-draft"};
+  return <span className={`badge ${m[s]||"badge-draft"}`}>{s}</span>;
+}
+function exportXLSX(data,filename,sheet){const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,sheet||"Sheet1");XLSX.writeFile(wb,filename);}
+function exportPDF(title,cols,rows,filename){const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});doc.setFontSize(15);doc.setTextColor(26,26,46);doc.text("DigiGST — "+title,14,18);doc.setFontSize(8);doc.setTextColor(120,120,120);doc.text(`GSTIN: ${GSTIN} | ${COMPANY} | ${new Date().toLocaleDateString('en-IN')}`,14,25);doc.setDrawColor(255,212,0);doc.setLineWidth(0.8);doc.line(14,29,282,29);doc.autoTable({startY:33,head:[cols],body:rows,styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[26,26,46],textColor:[255,212,0],fontStyle:'bold'},alternateRowStyles:{fillColor:[255,253,230]},theme:'grid'});doc.save(filename);}
+function exportCSV(data,filename){if(!data.length)return;const k=Object.keys(data[0]);const csv=[k.join(","),...data.map(r=>k.map(key=>`"${r[key]}"`).join(","))].join("\n");const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u);}
+
+/* ══════════════════════════════════════════
+   NAV
+══════════════════════════════════════════ */
+const NAV=[
+  {id:"dashboard",label:"Dashboard",icon:"⊞"},
+  {id:"einvoice",label:"E-Invoice Print",icon:"🖨"},
+  {id:"returnreports",label:"Return Reports",icon:"📊"},
+  {id:"returndash",label:"Return Dashboard",icon:"📋"},
+  {id:"imsreport",label:"IMS Report",icon:"📈"},
+  {id:"ledgers",label:"Ledgers",icon:"📒"},
+  {id:"utilities",label:"Utilities",icon:"🔧"},
+  {id:"aiinsights",label:"AI Insights",icon:"🧠"},
+];
+
+/* ══════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════ */
+function App(){
+  const[nav,setNav]=useState("dashboard");
+  const[sidebar,setSidebar]=useState(true);
+  const[flash,setFlash]=useState(null);
+  const[reportModal,setReportModal]=useState(false);
+  const[fStatus,setFStatus]=useState("All");
+  const[fPeriod,setFPeriod]=useState("All");
+  const[showFilter,setShowFilter]=useState(false);
+  const[search,setSearch]=useState("");
+  const[period,setPeriod]=useState("All");
+  const[chatOpen,setChatOpen]=useState(false);
+  const[msgs,setMsgs]=useState([]);
+  const[chatInput,setChatInput]=useState("");
+  const[thinking,setThinking]=useState(false);
+  const[chatHistory,setChatHistory]=useState([]);
+  const[showKeyModal,setShowKeyModal]=useState(false);
+  const[keyInput,setKeyInput]=useState("");
+  const[keyStatus,setKeyStatus]=useState("none");// none|set|error
+  const filterRef=useRef(null);
+  const chatEnd=useRef(null);
+
+  useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
+  useEffect(()=>{const fn=e=>{if(filterRef.current&&!filterRef.current.contains(e.target))setShowFilter(false)};document.addEventListener("mousedown",fn);return()=>document.removeEventListener("mousedown",fn);},[]);
+
+  // Auto morning briefing on first open
+  useEffect(()=>{
+    if(chatOpen&&msgs.length===0){
+      loadMorningBriefing();
+    }
+  },[chatOpen]);
+
+  const goNav=(id)=>{setNav(id);setFlash(id);setTimeout(()=>setFlash(null),1800);};
+
+  function saveKey(){
+    const k=keyInput.trim();
+    if(!k.startsWith("sk-ant-")){setKeyStatus("error");return;}
+    window.__APIKEY=k;
+    setKeyStatus("set");
+    setShowKeyModal(false);
+    setKeyInput("");
+    setMsgs([]);
+    setChatHistory([]);
+    setTimeout(loadMorningBriefing,200);
+  }
+
+  async function loadMorningBriefing(){
+    setThinking(true);
+    const briefingPrompt="Give me a morning briefing. What are the 3 most urgent things I need to do today? Be specific with return names, amounts and deadlines. End with one quick win I can do in under 5 minutes.";
+    try{
+      const reply=await callAI([{role:"user",content:briefingPrompt}]);
+      const newHistory=[{role:"user",content:briefingPrompt},{role:"assistant",content:reply}];
+      setChatHistory(newHistory);
+      setMsgs([{from:"system",text:reply,label:"☀️ Morning Briefing — Live AI"}]);
+    }catch(e){
+      const local=localAnswer("morning briefing urgent today");
+      setMsgs([{from:"system",text:local,label:"☀️ Morning Briefing"}]);
+    }
+    setThinking(false);
+  }
+
+  async function sendMsg(inputOverride){
+    const text=(inputOverride||chatInput).trim();
+    if(!text||thinking)return;
+    setChatInput("");
+    setMsgs(p=>[...p,{from:"user",text}]);
+    setThinking(true);
+
+    const navMap={
+      "e-invoice":"einvoice","einvoice":"einvoice","invoice print":"einvoice",
+      "return report":"returnreports","return dashboard":"returndash",
+      "ims report":"imsreport","ims":"imsreport",
+      "ledger":"ledgers","ledgers":"ledgers",
+      "utilities":"utilities","utility":"utilities",
+      "ai insight":"aiinsights","ai insights":"aiinsights",
+      "dashboard":"dashboard","home":"dashboard",
+    };
+    const lower=text.toLowerCase();
+    let navTarget=null;
+    for(const[k,v]of Object.entries(navMap)){if(lower.includes(k)){navTarget=v;break;}}
+
+    try{
+      const newHistory=[...chatHistory,{role:"user",content:text}];
+      const reply=await callAI(newHistory);
+      setChatHistory([...newHistory,{role:"assistant",content:reply}].slice(-12));
+      setMsgs(p=>[...p,{from:"ai",text:reply}]);
+      if(navTarget)setTimeout(()=>goNav(navTarget),600);
+    }catch(e){
+      if(e.message==="NO_KEY"){
+        const local=localAnswer(text);
+        setMsgs(p=>[...p,{from:"local",text:local}]);
+        if(navTarget)setTimeout(()=>goNav(navTarget),600);
+      }else{
+        setMsgs(p=>[...p,{from:"bot",text:"API Error: "+e.message+"\n\nCheck your key is valid. Click 🔑 to update it."}]);
+      }
+    }
+    setThinking(false);
+  }
+
+  const filtered=useMemo(()=>RETURNS.filter(r=>{
+    const ms=fStatus==="All"||r.status===fStatus;
+    const mp=fPeriod==="All"||r.period===fPeriod;
+    const ma=period==="All"||r.period===period;
+    const mq=!search||[r.type,r.period,r.status,r.by].some(v=>v.toLowerCase().includes(search.toLowerCase()));
+    return ms&&mp&&ma&&mq;
+  }),[fStatus,fPeriod,period,search]);
+
+  const stats=useMemo(()=>{
+    const base=period==="All"?RETURNS:RETURNS.filter(r=>r.period===period);
+    return{
+      total:base.length,
+      filed:base.filter(r=>r.status==="Filed").length,
+      pending:base.filter(r=>["Pending","Error","Draft"].includes(r.status)).length,
+      tax:base.reduce((s,r)=>s+r.tax,0),
+      itc:197500,score:87
+    };
+  },[period]);
+
+  const sW=sidebar?"w-56":"w-14";
+  const mL=sidebar?"ml-56":"ml-14";
+
+  return(
+    <div className="flex h-screen overflow-hidden bg-ey-gray">
+      {/* ── SIDEBAR ── */}
+      <aside className={`fixed left-0 top-0 h-full ${sW} bg-ey-navy flex flex-col z-40`} style={{transition:"width .25s ease"}}>
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-ey-navy-mid">
+          <div className="w-8 h-8 bg-ey-yellow rounded flex items-center justify-center font-bold text-ey-navy text-sm flex-shrink-0">EY</div>
+          {sidebar&&<div><div className="text-white font-semibold text-sm">DigiGST</div><div className="text-ey-gray-dark text-xs">Tax Platform</div></div>}
+        </div>
+        <button onClick={()=>setSidebar(!sidebar)} className="absolute -right-3 top-16 w-6 h-6 bg-ey-yellow rounded-full flex items-center justify-center text-ey-navy text-xs font-bold shadow-md z-50">{sidebar?"◀":"▶"}</button>
+        <nav className="flex-1 pt-3 overflow-y-auto">
+          {NAV.map(item=>(
+            <div key={item.id} onClick={()=>goNav(item.id)}
+              className={`snav flex items-center gap-3 px-4 py-3 ${nav===item.id?"active":""} ${flash===item.id?"flash":""}`}
+              style={{borderLeft:nav===item.id?"3px solid #FFD400":"3px solid transparent"}}>
+              <span style={{fontSize:15,flexShrink:0,width:20,textAlign:"center"}}>{item.icon}</span>
+              {sidebar&&<span className={`sidebar-text text-sm whitespace-nowrap ${nav===item.id?"text-ey-yellow font-medium":"text-gray-300"}`}>{item.label}</span>}
+              {item.id==="aiinsights"&&sidebar&&<span className="ml-auto text-xs bg-ey-yellow text-ey-navy px-1.5 py-0.5 rounded font-semibold">AI</span>}
+            </div>
+          ))}
+        </nav>
+        {sidebar&&<div className="px-4 py-3 border-t border-ey-navy-mid text-xs text-ey-gray-dark">v2.5 · FY 2023-24</div>}
+      </aside>
+
+      {/* ── MAIN ── */}
+      <div className={`flex-1 flex flex-col ${mL}`} style={{minWidth:0,transition:"margin .25s ease"}}>
+        {/* Header */}
+        <header className="h-14 bg-ey-navy flex items-center px-6 gap-4 sticky top-0 z-30 flex-shrink-0">
+          <div className="flex-1 max-w-sm relative">
+            <input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search returns, suppliers, status…"
+              className="w-full bg-ey-navy-mid text-white placeholder-gray-400 text-sm rounded-lg pl-9 pr-4 py-2 border border-ey-navy-light focus:border-ey-yellow"/>
+            <span className="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
+          </div>
+          <div className="flex-1"/>
+          <button className="relative p-2 rounded-lg hover:bg-ey-navy-light">
+            <span className="text-gray-300">🔔</span>
+            <span className="absolute top-1 right-1 w-2 h-2 bg-ey-yellow rounded-full"></span>
+          </button>
+          <button onClick={()=>setReportModal(true)} className="flex items-center gap-2 bg-ey-yellow hover:bg-ey-yellow-dark text-ey-navy text-sm font-semibold px-4 py-2 rounded-lg">
+            <span>⬇</span><span className="hidden sm:inline">Generate Report</span>
+          </button>
+          <div className="w-8 h-8 rounded-full bg-ey-yellow flex items-center justify-center text-ey-navy font-bold text-xs">RS</div>
+        </header>
+
+        {/* Page */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1 className="text-xl font-semibold text-ey-charcoal">{NAV.find(n=>n.id===nav)?.label||"Dashboard"}</h1>
+              <p className="text-sm text-ey-gray-dark mt-0.5">FY 2023-24 · {GSTIN} · {COMPANY}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-white border border-ey-gray-mid rounded-lg p-1">
+                {["All","Mar 2024","Feb 2024"].map(p=>(
+                  <button key={p} onClick={()=>setPeriod(p)} className={`tab-btn ${period===p?"active":""}`}>{p}</button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5"><div className="pulse"></div><span className="text-xs text-green-600 font-medium">Live</span></div>
+            </div>
+          </div>
+
+          {/* Render active page */}
+          {nav==="dashboard"&&<DashboardPage stats={stats} filtered={filtered} period={period} fStatus={fStatus} setFStatus={setFStatus} fPeriod={fPeriod} setFPeriod={setFPeriod} showFilter={showFilter} setShowFilter={setShowFilter} filterRef={filterRef} openReport={()=>setReportModal(true)} goNav={goNav}/>}
+          {nav==="returndash"&&<ReturnDashPage period={period}/>}
+          {nav==="imsreport"&&<IMSPage period={period}/>}
+          {nav==="ledgers"&&<LedgerPage period={period}/>}
+          {nav==="einvoice"&&<EInvoicePage/>}
+          {nav==="utilities"&&<UtilPage/>}
+          {nav==="aiinsights"&&<AIPage/>}
+          {nav==="returnreports"&&<ReturnReportsPage filtered={filtered} fStatus={fStatus} setFStatus={setFStatus} fPeriod={fPeriod} setFPeriod={setFPeriod} showFilter={showFilter} setShowFilter={setShowFilter} filterRef={filterRef} openReport={()=>setReportModal(true)}/>}
+        </main>
+      </div>
+
+      {/* ── REPORT MODAL ── */}
+      {reportModal&&<ReportModal filtered={filtered} onClose={()=>setReportModal(false)}/>}
+
+      {/* ── API KEY MODAL ── */}
+      {showKeyModal&&(
+        <div className="modal-ov" onClick={()=>setShowKeyModal(false)}>
+          <div className="bg-white rounded-2xl p-7 w-full max-w-md mx-4 shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 bg-ey-navy rounded-xl flex items-center justify-center text-2xl">🔑</div>
+              <div>
+                <h3 className="text-lg font-semibold text-ey-charcoal">Anthropic API Key</h3>
+                <p className="text-xs text-ey-gray-dark mt-0.5">Stored in memory only · never sent to any server except api.anthropic.com</p>
+              </div>
+            </div>
+            <div className="bg-ey-yellow-pale border border-yellow-200 rounded-xl p-3 mb-4 text-xs text-ey-charcoal">
+              <strong>Without a key:</strong> The chatbot uses smart pre-built answers covering all 8 question types.<br/>
+              <strong>With a key:</strong> Full Claude AI — answer any question about your GST data in natural language.
+            </div>
+            <input type="password" value={keyInput} onChange={e=>setKeyInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&saveKey()}
+              placeholder="sk-ant-api03-..."
+              className="w-full border border-ey-gray-mid rounded-xl px-4 py-3 text-sm font-mono text-ey-charcoal focus:border-ey-yellow mb-2"/>
+            {keyStatus==="error"&&<p className="text-xs text-red-600 mb-3">Key must start with sk-ant- — get yours at console.anthropic.com</p>}
+            {keyStatus==="set"&&<p className="text-xs text-green-600 mb-3">✓ Key saved — AI is now using Claude</p>}
+            <div className="flex gap-3 mt-3">
+              <button onClick={saveKey} className="flex-1 bg-ey-yellow hover:bg-ey-yellow-dark text-ey-navy font-semibold py-2.5 rounded-xl text-sm">Save & Activate</button>
+              <button onClick={()=>{window.__APIKEY="";setKeyStatus("none");setShowKeyModal(false);}} className="px-4 border border-ey-gray-mid text-ey-charcoal py-2.5 rounded-xl text-sm hover:bg-ey-gray">Clear Key</button>
+            </div>
+            <p className="text-xs text-ey-gray-dark mt-3 text-center">Get a free API key at <a href="https://console.anthropic.com" target="_blank" className="text-blue-600 underline">console.anthropic.com</a></p>
+          </div>
+        </div>
+      )}
+
+      {/* ── CHAT TOGGLE ── */}
+      <button onClick={()=>setChatOpen(!chatOpen)}
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-ey-yellow hover:bg-ey-yellow-dark shadow-xl rounded-full flex items-center justify-center text-2xl transition-all hover:scale-105"
+        title="AI GST Assistant">
+        {chatOpen?"✕":"🤖"}
+      </button>
+      {!chatOpen&&<div className="fixed bottom-6 right-[5.5rem] z-50 bg-ey-navy text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-lg pointer-events-none">Ask AI anything</div>}
+
+      {/* ── CHATBOT ── */}
+      {chatOpen&&(
+        <div className="chat-win">
+          {/* Header */}
+          <div className="bg-ey-navy px-4 py-3 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-ey-yellow rounded-xl flex items-center justify-center text-ey-navy font-bold text-sm">AI</div>
+              <div>
+                <div className="text-white text-sm font-semibold">DigiGST AI Assistant</div>
+                <div className="flex items-center gap-1.5">
+                  <div className="pulse"></div>
+                  <span className={`text-xs ${window.__APIKEY?"text-green-400":"text-yellow-400"}`}>
+                    {window.__APIKEY?"Claude AI · Live":"Smart mode · No key"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={()=>setShowKeyModal(true)} title="Set API key for full Claude AI"
+                className={`text-lg px-1.5 py-0.5 rounded-lg transition-colors ${window.__APIKEY?"text-green-400 hover:text-green-200":"text-yellow-400 hover:text-ey-yellow animate-pulse"}`}>
+                🔑
+              </button>
+              <button onClick={loadMorningBriefing} title="Refresh briefing" className="text-ey-gray-dark hover:text-ey-yellow text-lg">↺</button>
+              <button onClick={()=>setChatOpen(false)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+          </div>
+
+          {/* Thinking bar */}
+          {thinking&&<div className="thinking-bar flex-shrink-0"></div>}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4 space-y-3">
+            {msgs.length===0&&!thinking&&(
+              <div className="text-center py-6">
+                <div className="text-3xl mb-2">🤖</div>
+                <p className="text-sm text-ey-gray-dark">Loading your morning briefing…</p>
+              </div>
+            )}
+            {msgs.map((msg,i)=>(
+              <div key={i} className={`flex ${msg.from==="user"?"justify-end":"justify-start"}`}>
+                {msg.from!=="user"&&(
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold mr-2 mt-1 flex-shrink-0 ${msg.from==="ai"||msg.from==="system"?"bg-ey-navy text-ey-yellow":"bg-ey-gray-mid text-ey-charcoal"}`}>
+                    {msg.from==="system"?"☀":"AI"}
+                  </div>
+                )}
+                <div>
+                  {msg.label&&<p className="text-xs font-semibold text-ey-gray-dark mb-1 ml-1">{msg.label}</p>}
+                  <div className={`px-4 py-3 text-sm leading-relaxed ${msg.from==="user"?"bub-user":msg.from==="system"?"bub-system":msg.from==="ai"?"bub-ai":msg.from==="local"?"bub-bot":"bub-bot"}`}
+                    style={{whiteSpace:"pre-wrap"}}>
+                    {msg.text}
+                    {msg.from==="local"&&<span className="block mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400">Smart local answer · <button onClick={()=>setShowKeyModal(true)} className="text-blue-500 underline">Add API key</button> for full Claude AI</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {thinking&&(
+              <div className="flex justify-start">
+                <div className="w-7 h-7 rounded-xl bg-ey-navy flex items-center justify-center text-ey-yellow text-xs font-bold mr-2 mt-1 flex-shrink-0">AI</div>
+                <div className="bub-ai px-4 py-3">
+                  <div className="flex gap-1.5 items-center"><div className="ai-dot"></div><div className="ai-dot"></div><div className="ai-dot"></div><span className="text-xs text-yellow-300 ml-2">Analysing your data…</span></div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEnd}/>
+          </div>
+
+          {/* Smart question chips */}
+          <div className="bg-white border-t border-ey-gray-mid px-3 pt-2.5 pb-1.5 flex gap-1.5 overflow-x-auto">
+            {SMART_QUESTIONS.slice(0,4).map((q,i)=>(
+              <button key={i} onClick={()=>sendMsg(q.text)} className="suggestion-chip flex-shrink-0">
+                {q.icon} {q.text}
+              </button>
+            ))}
+          </div>
+          <div className="bg-white px-3 pb-2 flex gap-1.5 overflow-x-auto">
+            {SMART_QUESTIONS.slice(4).map((q,i)=>(
+              <button key={i} onClick={()=>sendMsg(q.text)} className="suggestion-chip flex-shrink-0">
+                {q.icon} {q.text}
+              </button>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div className="bg-white border-t border-ey-gray-mid px-3 py-3 flex gap-2 flex-shrink-0">
+            <input type="text" value={chatInput} onChange={e=>setChatInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&!thinking&&sendMsg()}
+              placeholder="Ask anything about your GST data…"
+              className="flex-1 text-sm border border-ey-gray-mid rounded-xl px-4 py-2.5 text-ey-charcoal focus:border-ey-yellow"/>
+            <button onClick={()=>sendMsg()} disabled={thinking||!chatInput.trim()}
+              className="bg-ey-yellow hover:bg-ey-yellow-dark disabled:opacity-40 text-ey-navy w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm transition-all">
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD PAGE
+══════════════════════════════════════════ */
+function DashboardPage({stats,filtered,period,fStatus,setFStatus,fPeriod,setFPeriod,showFilter,setShowFilter,filterRef,openReport,goNav}){
+  return(
+    <>
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+        {[
+          {l:"Total Returns",v:stats.total,sub:"Selected period",icon:"📋",c:"text-ey-charcoal"},
+          {l:"Filed",v:stats.filed,sub:`${Math.round(stats.filed/Math.max(stats.total,1)*100)}% rate`,icon:"✅",c:"text-green-600"},
+          {l:"Pending / Error",v:stats.pending,sub:"Action needed",icon:"⚠️",c:"text-amber-600"},
+          {l:"Tax Paid",v:fmt(stats.tax),sub:"Net GST",icon:"💳",c:"text-ey-charcoal"},
+          {l:"ITC Balance",v:"₹1,97,500",sub:"Mar 2024 closing",icon:"💰",c:"text-blue-600"},
+          {l:"AI Score",v:"87/100",sub:"↑4 vs last qtr",icon:"🧠",c:"text-purple-600"},
+        ].map((s,i)=>(
+          <div key={i} className="scard">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-ey-gray-dark font-medium uppercase tracking-wide">{s.l}</p>
+                <p className={`text-xl font-bold mt-1 ${s.c}`}>{s.v}</p>
+                <p className="text-xs text-ey-gray-dark mt-1">{s.sub}</p>
+              </div>
+              <span className="text-xl opacity-30">{s.icon}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <MonthlyChart/>
+        <StatusBreakdown returns={filtered}/>
+      </div>
+
+      {/* Returns table */}
+      <ReturnsTable filtered={filtered} fStatus={fStatus} setFStatus={setFStatus} fPeriod={fPeriod} setFPeriod={setFPeriod} showFilter={showFilter} setShowFilter={setShowFilter} filterRef={filterRef} openReport={openReport}/>
+
+      {/* Bottom row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+        <DueDatesCard/>
+        <QuickActionsCard goNav={goNav} openReport={openReport}/>
+        <AISignalsCard goNav={goNav}/>
+      </div>
+    </>
+  );
+}
+
+/* ── ReturnsTable (reusable) ── */
+function ReturnsTable({filtered,fStatus,setFStatus,fPeriod,setFPeriod,showFilter,setShowFilter,filterRef,openReport}){
+  return(
+    <div className="bg-white rounded-xl border border-ey-gray-mid overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-ey-gray-mid">
+        <div>
+          <h2 className="text-sm font-semibold text-ey-charcoal">GST Return Register</h2>
+          <p className="text-xs text-ey-gray-dark mt-0.5">{filtered.length} records</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={filterRef}>
+            <button onClick={()=>setShowFilter(!showFilter)} className="flex items-center gap-2 text-sm border border-ey-gray-mid bg-ey-gray hover:bg-ey-gray-mid text-ey-charcoal px-3 py-2 rounded-lg font-medium">
+              ⚙ Filter{(fStatus!=="All"||fPeriod!=="All")&&<span className="w-2 h-2 rounded-full bg-ey-yellow inline-block ml-1"></span>}
+            </button>
+            {showFilter&&(
+              <div className="absolute right-0 top-10 z-50 bg-white border border-ey-gray-mid rounded-xl shadow-xl p-4 w-52">
+                <p className="text-xs font-semibold text-ey-gray-dark uppercase tracking-wide mb-2">Status</p>
+                {["All","Filed","Pending","Processing","Error","Draft"].map(s=>(
+                  <label key={s} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-ey-gray-dark hover:text-ey-charcoal">
+                    <input type="radio" name="st" checked={fStatus===s} onChange={()=>setFStatus(s)} className="accent-yellow-400"/>{s}
+                  </label>
+                ))}
+                <p className="text-xs font-semibold text-ey-gray-dark uppercase tracking-wide mt-3 mb-2">Period</p>
+                {["All","Mar 2024","Feb 2024"].map(p=>(
+                  <label key={p} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-ey-gray-dark hover:text-ey-charcoal">
+                    <input type="radio" name="pd" checked={fPeriod===p} onChange={()=>setFPeriod(p)} className="accent-yellow-400"/>{p}
+                  </label>
+                ))}
+                <button onClick={()=>{setFStatus("All");setFPeriod("All");setShowFilter(false)}} className="w-full text-center text-xs text-ey-gray-dark hover:text-red-600 border-t border-ey-gray-mid mt-3 pt-2">Clear all</button>
+              </div>
+            )}
+          </div>
+          <button onClick={openReport} className="text-sm bg-ey-yellow hover:bg-ey-yellow-dark text-ey-navy px-3 py-2 rounded-lg font-semibold">Export</button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm" style={{borderCollapse:"collapse"}}>
+          <thead>
+            <tr className="bg-ey-gray">
+              {["#","Return Type","Period","Status","Tax Amount","IGST","CGST+SGST","Last Updated","Filed By","Action"].map(h=>(
+                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-ey-gray-dark uppercase tracking-wide border-b border-ey-gray-mid">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length===0?(
+              <tr><td colSpan={10} className="text-center py-10 text-ey-gray-dark text-sm">No records match current filters.</td></tr>
+            ):filtered.map((r,i)=>(
+              <tr key={r.id} className={`trh border-b border-ey-gray-mid last:border-0 transition-colors ${r.status==="Error"?"bg-red-50":r.status==="Pending"||r.status==="Draft"?"bg-amber-50/30":""}`}>
+                <td className="px-4 py-2.5 text-xs text-ey-gray-dark font-mono">{String(i+1).padStart(2,"0")}</td>
+                <td className="px-4 py-2.5 font-semibold text-ey-charcoal font-mono text-xs">{r.type}</td>
+                <td className="px-4 py-2.5 text-xs text-ey-charcoal">{r.period}</td>
+                <td className="px-4 py-2.5"><SBadge s={r.status}/></td>
+                <td className="px-4 py-2.5 text-xs font-mono font-semibold">{r.tax>0?fmt(r.tax):"—"}</td>
+                <td className="px-4 py-2.5 text-xs font-mono text-ey-gray-dark">{r.igst>0?fmt(r.igst):"—"}</td>
+                <td className="px-4 py-2.5 text-xs font-mono text-ey-gray-dark">{r.cgst>0?fmt(r.cgst+r.sgst):"—"}</td>
+                <td className="px-4 py-2.5 text-xs text-ey-gray-dark">{r.updated}</td>
+                <td className="px-4 py-2.5 text-xs text-ey-gray-dark">{r.by}</td>
+                <td className="px-4 py-2.5 text-right">
+                  <button onClick={()=>alert(`${r.type} – ${r.period}\nStatus: ${r.status}\nTax: ${fmt(r.tax)} | IGST: ${fmt(r.igst)} | CGST: ${fmt(r.cgst)} | SGST: ${fmt(r.sgst)}\nFiled by: ${r.by} on ${r.updated}`)}
+                    className="text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md border border-blue-100">
+                    View
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between px-5 py-3 bg-ey-gray border-t border-ey-gray-mid">
+        <span className="text-xs text-ey-gray-dark">Showing {filtered.length} of {RETURNS.length} records</span>
+        <div className="flex gap-1">{[1,2].map(p=><button key={p} className={`w-7 h-7 text-xs rounded ${p===1?"bg-ey-yellow text-ey-navy font-semibold":"text-ey-gray-dark"}`}>{p}</button>)}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Charts ── */
+function MonthlyChart(){
+  const months=[
+    {l:"Feb",tax:292500,taxable:1625000},
+    {l:"Mar",tax:331200,taxable:1840000},
+  ];
+  const maxT=Math.max(...months.map(m=>m.taxable));
+  return(
+    <div className="bg-white rounded-xl border border-ey-gray-mid p-5">
+      <h3 className="text-sm font-semibold text-ey-charcoal mb-1">Monthly Tax Summary</h3>
+      <p className="text-xs text-ey-gray-dark mb-5">Feb vs Mar 2024 — tax grew 13.2% MoM</p>
+      <div className="flex items-end justify-center gap-10" style={{height:110}}>
+        {months.map((m,i)=>(
+          <div key={i} className="flex flex-col items-center gap-2">
+            <div className="flex items-end gap-1.5" style={{height:90}}>
+              <div title={fmt(m.taxable)} style={{width:26,height:`${(m.taxable/maxT)*90}px`,background:"#E8E8E4",borderRadius:"3px 3px 0 0",transition:"height .6s ease"}}></div>
+              <div title={fmt(m.tax)} style={{width:26,height:`${(m.tax/Math.max(...months.map(x=>x.tax)))*90}px`,background:"#FFD400",borderRadius:"3px 3px 0 0",transition:"height .6s ease"}}></div>
+            </div>
+            <span className="text-xs text-ey-gray-dark font-medium">{m.l} 2024</span>
+            <span className="text-xs font-bold text-ey-charcoal">{fmt(m.tax)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-center gap-5 mt-2">
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{background:"#E8E8E4"}}></div><span className="text-xs text-ey-gray-dark">Taxable</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-ey-yellow"></div><span className="text-xs text-ey-gray-dark">Tax Paid</span></div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBreakdown({returns}){
+  const c={Filed:0,Pending:0,Processing:0,Error:0,Draft:0};
+  returns.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++;});
+  const t=returns.length||1;
+  return(
+    <div className="bg-white rounded-xl border border-ey-gray-mid p-5">
+      <h3 className="text-sm font-semibold text-ey-charcoal mb-1">Status Breakdown</h3>
+      <p className="text-xs text-ey-gray-dark mb-4">{t} returns in current filter</p>
+      {[{l:"Filed",v:c.Filed,col:"bg-green-500"},{l:"Processing",v:c.Processing,col:"bg-blue-400"},{l:"Pending",v:c.Pending,col:"bg-amber-400"},{l:"Error",v:c.Error,col:"bg-red-500"},{l:"Draft",v:c.Draft,col:"bg-gray-300"}].map((b,i)=>(
+        <div key={i} className="flex items-center gap-3 mb-2.5">
+          <span className="text-xs text-ey-gray-dark w-20">{b.l}</span>
+          <div className="flex-1 bg-gray-100 rounded-full h-2">
+            <div className={`h-2 rounded-full ${b.col}`} style={{width:`${(b.v/t)*100}%`,transition:"width .5s"}}></div>
+          </div>
+          <span className="text-xs font-bold text-ey-charcoal w-5 text-right">{b.v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Bottom cards ── */
+function DueDatesCard(){
+  return(
+    <div className="bg-white rounded-xl border border-ey-gray-mid p-5">
+      <div className="flex items-center gap-2 mb-3"><div className="w-7 h-7 bg-ey-yellow-light rounded-lg flex items-center justify-center text-sm">📅</div><span className="text-sm font-semibold text-ey-charcoal">Upcoming Due Dates</span></div>
+      {DUE_DATES.map((d,i)=>(
+        <div key={i} className={`flex items-center justify-between py-2 border-b border-ey-gray-mid last:border-0 pl-2 ${d.urgency==="high"?"urgency-high":d.urgency==="med"?"urgency-med":"urgency-low"}`}>
+          <span className="text-xs font-mono font-semibold text-ey-charcoal">{d.return}</span>
+          <span className="text-xs text-ey-gray-dark">{d.due}</span>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${d.filed?"bg-green-100 text-green-700":d.days<=7?"bg-red-100 text-red-700":d.days<=30?"bg-amber-100 text-amber-700":"bg-green-100 text-green-700"}`}>{d.filed?"✓":d.days+"d"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QuickActionsCard({goNav,openReport}){
+  const a=[
+    {l:"File GSTR-1",i:"📤",n:"returnreports"},{l:"Reconcile ITC",i:"🔁",n:"imsreport"},
+    {l:"AI Analysis",i:"🧠",n:"aiinsights"},{l:"Export Report",i:"⬇",fn:openReport},
+    {l:"Open Ledgers",i:"📒",n:"ledgers"},{l:"Utilities",i:"🔧",n:"utilities"},
+  ];
+  return(
+    <div className="bg-white rounded-xl border border-ey-gray-mid p-5">
+      <div className="flex items-center gap-2 mb-3"><div className="w-7 h-7 bg-ey-yellow-light rounded-lg flex items-center justify-center text-sm">⚡</div><span className="text-sm font-semibold text-ey-charcoal">Quick Actions</span></div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {a.map((x,i)=>(
+          <button key={i} onClick={()=>x.fn?x.fn():goNav(x.n)} className="flex items-center gap-2 py-2 px-2.5 text-xs text-ey-charcoal hover:bg-ey-yellow-pale rounded-lg border border-transparent hover:border-yellow-200 transition-colors text-left">
+            <span>{x.i}</span>{x.l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AISignalsCard({goNav}){
+  const signals=[
+    {i:"🔴",t:"GSTR-4 Mar still Draft — file today",type:"high"},
+    {i:"🟡",t:"9 IMS invoices pending — ₹2.08L ITC at risk",type:"med"},
+    {i:"🟡",t:"GSTR-3B Feb Error unresolved",type:"med"},
+    {i:"🟢",t:"Mar compliance: 87/100 — above avg",type:"ok"},
+  ];
+  return(
+    <div className="bg-white rounded-xl border border-ey-gray-mid p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2"><div className="w-7 h-7 bg-ey-navy rounded-lg flex items-center justify-center text-ey-yellow text-xs font-bold">AI</div><span className="text-sm font-semibold text-ey-charcoal">AI Signals</span></div>
+        <button onClick={()=>goNav("aiinsights")} className="text-xs text-blue-600 hover:underline">Full →</button>
+      </div>
+      {signals.map((s,i)=>(
+        <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs mb-1.5 ${s.type==="high"?"bg-red-50 border border-red-100":s.type==="med"?"bg-amber-50 border border-amber-100":"bg-green-50 border border-green-100"}`}>
+          <span className="flex-shrink-0">{s.i}</span>
+          <span className={s.type==="high"?"text-red-800":s.type==="med"?"text-amber-800":"text-green-800"}>{s.t}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   OTHER PAGES
+══════════════════════════════════════════ */
+function ReturnReportsPage({filtered,...rest}){
+  return(
+    <div>
+      <div className="grid grid-cols-4 gap-3 mb-5">
+        {[{l:"Total",v:filtered.length},{l:"Filed",v:filtered.filter(r=>r.status==="Filed").length},{l:"Errors",v:filtered.filter(r=>r.status==="Error").length},{l:"Tax",v:fmt(filtered.reduce((s,r)=>s+r.tax,0))}].map((s,i)=>(
+          <div key={i} className="scard"><p className="text-xs text-ey-gray-dark uppercase">{s.l}</p><p className="text-xl font-bold text-ey-charcoal mt-1">{s.v}</p></div>
+        ))}
+      </div>
+      <ReturnsTable filtered={filtered} {...rest}/>
+    </div>
+  );
+}
+
+function ReturnDashPage({period}){
+  const data=period==="All"?RETURNS:RETURNS.filter(r=>r.period===period);
+  const byType={};
+  data.forEach(r=>{if(!byType[r.type])byType[r.type]={total:0,filed:0,pending:0,tax:0};byType[r.type].total++;if(r.status==="Filed")byType[r.type].filed++;if(["Pending","Error","Draft"].includes(r.status))byType[r.type].pending++;byType[r.type].tax+=r.tax;});
+  return(
+    <div>
+      <div className="grid grid-cols-4 gap-3 mb-5">
+        {[{l:"Total",v:data.length},{l:"Filed",v:data.filter(r=>r.status==="Filed").length},{l:"Pending",v:data.filter(r=>["Pending","Error","Draft"].includes(r.status)).length},{l:"Tax",v:fmt(data.reduce((s,r)=>s+r.tax,0))}].map((s,i)=>(
+          <div key={i} className="scard"><p className="text-xs text-ey-gray-dark uppercase">{s.l}</p><p className="text-xl font-bold text-ey-charcoal mt-1">{s.v}</p></div>
+        ))}
+      </div>
+      <div className="bg-white rounded-xl border border-ey-gray-mid overflow-hidden">
+        <div className="px-5 py-4 border-b border-ey-gray-mid flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ey-charcoal">Return Type Summary</h2>
+          <button onClick={()=>exportXLSX(data.map(r=>({Type:r.type,Period:r.period,Status:r.status,Tax:r.tax,By:r.by})),"ReturnDashboard.xlsx","Summary")} className="text-xs bg-ey-yellow text-ey-navy px-3 py-1.5 rounded-lg font-semibold">Excel ⬇</button>
+        </div>
+        <table className="w-full text-sm" style={{borderCollapse:"collapse"}}>
+          <thead><tr className="bg-ey-gray">{["Return Type","Filings","Filed","Pending/Error","Total Tax","Coverage %"].map(h=><th key={h} className="text-left px-5 py-3 text-xs font-semibold text-ey-gray-dark uppercase border-b border-ey-gray-mid">{h}</th>)}</tr></thead>
+          <tbody>{Object.entries(byType).map(([type,d],i)=>(
+            <tr key={i} className="trh border-b border-ey-gray-mid">
+              <td className="px-5 py-3 font-mono font-semibold text-xs text-ey-charcoal">{type}</td>
+              <td className="px-5 py-3 text-xs">{d.total}</td>
+              <td className="px-5 py-3"><span className="badge badge-filed">{d.filed}</span></td>
+              <td className="px-5 py-3"><span className={`badge ${d.pending>0?"badge-pending":"badge-filed"}`}>{d.pending}</span></td>
+              <td className="px-5 py-3 font-mono text-xs">{d.tax>0?fmt(d.tax):"—"}</td>
+              <td className="px-5 py-3 text-xs text-ey-gray-dark">{d.total?Math.round((d.filed/d.total)*100):0}%</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function IMSPage({period}){
+  const data=period==="All"?IMS:IMS.filter(r=>r.period===period);
+  return(
+    <div>
+      <div className="grid grid-cols-4 gap-3 mb-5">
+        {[{l:"Suppliers",v:new Set(data.map(d=>d.gstin)).size},{l:"Invoices",v:data.reduce((s,r)=>s+r.invoices,0)},{l:"ITC Eligible",v:fmt(data.reduce((s,r)=>s+r.itc,0))},{l:"Pending",v:data.reduce((s,r)=>s+r.pending,0)}].map((s,i)=>(
+          <div key={i} className="scard"><p className="text-xs text-ey-gray-dark uppercase">{s.l}</p><p className="text-xl font-bold text-ey-charcoal mt-1">{s.v}</p></div>
+        ))}
+      </div>
+      <div className="bg-white rounded-xl border border-ey-gray-mid overflow-hidden">
+        <div className="px-5 py-4 border-b border-ey-gray-mid flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ey-charcoal">Invoice Management System</h2>
+          <div className="flex gap-2">
+            <button onClick={()=>exportXLSX(data.map(r=>({Supplier:r.supplier,GSTIN:r.gstin,Period:r.period,Invoices:r.invoices,Eligible:r.eligible,Pending:r.pending,Rejected:r.rejected,ITC:r.itc,Risk:r.risk})),"IMS.xlsx","IMS")} className="text-xs bg-ey-yellow text-ey-navy px-3 py-1.5 rounded-lg font-semibold">Excel</button>
+            <button onClick={()=>exportPDF("IMS Report",["Supplier","GSTIN","Period","Invoices","Eligible","Pending","Rejected","ITC","Risk"],data.map(r=>[r.supplier,r.gstin,r.period,r.invoices,r.eligible,r.pending,r.rejected,fmt(r.itc),r.risk]),"IMS.pdf")} className="text-xs bg-ey-navy text-ey-yellow px-3 py-1.5 rounded-lg font-semibold">PDF</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" style={{borderCollapse:"collapse"}}>
+            <thead><tr className="bg-ey-gray">{["Supplier","GSTIN","Period","Total","Eligible","Pending","Rejected","ITC","Risk","Action"].map(h=><th key={h} className="text-left px-4 py-3 text-xs font-semibold text-ey-gray-dark uppercase border-b border-ey-gray-mid">{h}</th>)}</tr></thead>
+            <tbody>{data.map((r,i)=>(
+              <tr key={i} className={`trh border-b border-ey-gray-mid ${r.risk==="High"?"bg-red-50/40":r.pending>0?"bg-amber-50/30":""}`}>
+                <td className="px-4 py-3 text-xs font-semibold text-ey-charcoal">{r.supplier}</td>
+                <td className="px-4 py-3 text-xs font-mono text-ey-gray-dark">{r.gstin}</td>
+                <td className="px-4 py-3 text-xs">{r.period}</td>
+                <td className="px-4 py-3 text-xs text-center">{r.invoices}</td>
+                <td className="px-4 py-3"><span className="badge badge-filed">{r.eligible}</span></td>
+                <td className="px-4 py-3"><span className={`badge ${r.pending>0?"badge-pending":"badge-filed"}`}>{r.pending}</span></td>
+                <td className="px-4 py-3"><span className={`badge ${r.rejected>0?"badge-err":"badge-filed"}`}>{r.rejected}</span></td>
+                <td className="px-4 py-3 text-xs font-mono font-semibold text-green-700">{fmt(r.itc)}</td>
+                <td className="px-4 py-3"><span className={`badge ${r.risk==="High"?"badge-err":r.risk==="Medium"?"badge-pending":"badge-filed"}`}>{r.risk}</span></td>
+                <td className="px-4 py-3">{r.pending>0?<button className="text-xs bg-amber-100 border border-amber-300 text-amber-800 px-2.5 py-1 rounded-md font-semibold">Take Action</button>:<span className="text-xs text-green-600">✓ Done</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LedgerPage({period}){
+  const data=period==="All"?LEDGER:LEDGER.filter(l=>{
+    if(period==="Mar 2024")return l.date.includes("Mar")||l.date==="31 Mar 2024"||l.date==="01 Mar 2024";
+    if(period==="Feb 2024")return l.date.includes("Feb")||l.date==="01 Feb 2024"||l.date==="28 Feb 2024";
+    return true;
+  });
+  const tc=data.reduce((s,l)=>s+l.credit,0);
+  const td=data.reduce((s,l)=>s+l.debit,0);
+  const bal=data[data.length-1]?.balance||0;
+  return(
+    <div>
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[{l:"Total Credit",v:fmt(tc),c:"text-green-600"},{l:"Total Debit",v:fmt(td),c:"text-red-600"},{l:"Closing Balance",v:fmt(bal),c:"text-blue-700"}].map((s,i)=>(
+          <div key={i} className="scard"><p className="text-xs text-ey-gray-dark uppercase">{s.l}</p><p className={`text-xl font-bold mt-1 ${s.c}`}>{s.v}</p></div>
+        ))}
+      </div>
+      <div className="bg-white rounded-xl border border-ey-gray-mid overflow-hidden">
+        <div className="px-5 py-4 border-b border-ey-gray-mid flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ey-charcoal">Electronic Credit Ledger</h2>
+          <div className="flex gap-2">
+            <button onClick={()=>exportXLSX(data.map(r=>({Date:r.date,Description:r.desc,Type:r.type,Debit:r.debit,Credit:r.credit,Balance:r.balance})),"Ledger.xlsx","Ledger")} className="text-xs bg-ey-yellow text-ey-navy px-3 py-1.5 rounded-lg font-semibold">Excel</button>
+            <button onClick={()=>exportPDF("Credit Ledger",["Date","Description","Type","Debit","Credit","Balance"],data.map(r=>[r.date,r.desc,r.type,r.debit>0?fmt(r.debit):"—",r.credit>0?fmt(r.credit):"—",fmt(r.balance)]),"Ledger.pdf")} className="text-xs bg-ey-navy text-ey-yellow px-3 py-1.5 rounded-lg font-semibold">PDF</button>
+          </div>
+        </div>
+        <table className="w-full text-sm" style={{borderCollapse:"collapse"}}>
+          <thead><tr className="bg-ey-gray">{["Date","Description","Type","Debit","Credit","Balance"].map(h=><th key={h} className="text-left px-5 py-3 text-xs font-semibold text-ey-gray-dark uppercase border-b border-ey-gray-mid">{h}</th>)}</tr></thead>
+          <tbody>{data.map((r,i)=>(
+            <tr key={i} className={`trh border-b border-ey-gray-mid ${r.type==="balance"?"bg-ey-yellow-pale font-medium":""}`}>
+              <td className="px-5 py-3 text-xs font-mono text-ey-gray-dark">{r.date}</td>
+              <td className="px-5 py-3 text-xs text-ey-charcoal">{r.desc}</td>
+              <td className="px-5 py-3"><span className={`badge ${r.type==="credit"?"badge-filed":r.type==="debit"?"badge-err":"badge-proc"}`}>{r.type}</span></td>
+              <td className="px-5 py-3 text-xs font-mono text-red-600 font-semibold">{r.debit>0?fmt(r.debit):"—"}</td>
+              <td className="px-5 py-3 text-xs font-mono text-green-600 font-semibold">{r.credit>0?fmt(r.credit):"—"}</td>
+              <td className="px-5 py-3 text-xs font-mono font-bold text-ey-charcoal">{fmt(r.balance)}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EInvoicePage(){
+  const inv=[
+    {irn:"INV2024031200001",date:"12 Mar 2024",buyer:"Bharat Steel Corp",gstin:"24AABCB5678B1Z3",value:248000,status:"Active"},
+    {irn:"INV2024031200002",date:"15 Mar 2024",buyer:"TechParts India Ltd",gstin:"29AABCT1234A1Z5",value:182000,status:"Active"},
+    {irn:"INV2024031200003",date:"18 Mar 2024",buyer:"Mumbai Logistics Co",gstin:"27AABCM9012C1Z1",value:94500,status:"Cancelled"},
+    {irn:"INV2024021200001",date:"05 Feb 2024",buyer:"Delhi Chemical Works",gstin:"07AABCD3456D1Z9",value:316000,status:"Active"},
+    {irn:"INV2024021200002",date:"14 Feb 2024",buyer:"Rajasthan Textiles",gstin:"08AABCR7890E1Z7",value:128500,status:"Active"},
+  ];
+  return(
+    <div>
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[{l:"E-Invoices",v:inv.length},{l:"Active",v:inv.filter(i=>i.status==="Active").length},{l:"Total Value",v:fmt(inv.reduce((s,i)=>s+i.value,0))}].map((s,i)=>(
+          <div key={i} className="scard"><p className="text-xs text-ey-gray-dark uppercase">{s.l}</p><p className="text-xl font-bold text-ey-charcoal mt-1">{s.v}</p></div>
+        ))}
+      </div>
+      <div className="bg-white rounded-xl border border-ey-gray-mid overflow-hidden">
+        <div className="px-5 py-4 border-b border-ey-gray-mid flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ey-charcoal">E-Invoice Register</h2>
+          <button onClick={()=>exportXLSX(inv.map(i=>({IRN:i.irn,Date:i.date,Buyer:i.buyer,GSTIN:i.gstin,Value:i.value,Status:i.status})),"EInvoices.xlsx","E-Invoices")} className="text-xs bg-ey-yellow text-ey-navy px-3 py-1.5 rounded-lg font-semibold">Excel ⬇</button>
+        </div>
+        <table className="w-full text-sm" style={{borderCollapse:"collapse"}}>
+          <thead><tr className="bg-ey-gray">{["IRN","Date","Buyer","GSTIN","Value","Status","Action"].map(h=><th key={h} className="text-left px-4 py-3 text-xs font-semibold text-ey-gray-dark uppercase border-b border-ey-gray-mid">{h}</th>)}</tr></thead>
+          <tbody>{inv.map((r,i)=>(
+            <tr key={i} className="trh border-b border-ey-gray-mid">
+              <td className="px-4 py-3 text-xs font-mono text-blue-700">{r.irn}</td>
+              <td className="px-4 py-3 text-xs">{r.date}</td>
+              <td className="px-4 py-3 text-xs font-semibold">{r.buyer}</td>
+              <td className="px-4 py-3 text-xs font-mono text-ey-gray-dark">{r.gstin}</td>
+              <td className="px-4 py-3 text-xs font-mono font-semibold">{fmt(r.value)}</td>
+              <td className="px-4 py-3"><span className={`badge ${r.status==="Active"?"badge-filed":"badge-err"}`}>{r.status}</span></td>
+              <td className="px-4 py-3 text-right"><button onClick={()=>alert("Printing IRN: "+r.irn)} className="text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md border border-blue-100">Print</button></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function UtilPage(){
+  const tools=[
+    {i:"📦",n:"Bulk Upload",d:"Upload returns via JSON/Excel",b:"Upload"},
+    {i:"🔁",n:"ITC Reconciliation",d:"Auto-match 2A vs 2B vs books",b:"Reconcile"},
+    {i:"{}",n:"JSON Validator",d:"Validate GST JSON pre-filing",b:"Validate"},
+    {i:"📊",n:"GSTR-9 Compiler",d:"Compile annual return",b:"Compile"},
+    {i:"🔍",n:"GSTIN Lookup",d:"Verify supplier GSTIN",b:"Lookup"},
+    {i:"📧",n:"Notice Manager",d:"Track and respond to notices",b:"Open"},
+  ];
+  return(
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {tools.map((t,i)=>(
+        <div key={i} className="bg-white rounded-xl border border-ey-gray-mid p-5 hover:border-ey-yellow transition-colors cursor-pointer group">
+          <div className="text-3xl mb-3">{t.i}</div>
+          <h3 className="text-sm font-semibold text-ey-charcoal mb-1">{t.n}</h3>
+          <p className="text-xs text-ey-gray-dark mb-4">{t.d}</p>
+          <button onClick={()=>alert(t.n+" — available in next release")} className="text-xs bg-ey-gray group-hover:bg-ey-yellow text-ey-charcoal group-hover:text-ey-navy px-4 py-2 rounded-lg font-semibold transition-colors">{t.b}</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AIPage(){
+  const[results,setResults]=useState({});
+  const[loading,setLoading]=useState({});
+  const analyses=[
+    {id:"morning",label:"Today's Action Plan",icon:"☀️",prompt:"What are the top 3 most urgent GST actions for today? Give me a clear action plan with specific return names, amounts, and deadlines. Be like a CA advising me on what to do first thing this morning."},
+    {id:"compliance",label:"Compliance Deep-Dive",icon:"📊",prompt:"Do a thorough compliance analysis. What's driving the 87/100 score? What specific issues are pulling it down? What would it take to get to 95+? Give me a 3-point improvement plan."},
+    {id:"itc",label:"ITC Optimisation",icon:"💰",prompt:"Analyse our ITC position. Why did the balance drop from ₹2,85,400 (Feb close) to ₹1,97,500 (Mar close)? Are we leaving any ITC on the table? Which pending IMS invoices should I prioritise accepting first?"},
+    {id:"risk",label:"Risk Assessment",icon:"⚠️",prompt:"Identify and rank all GST risks for Acme Enterprises. Include the GSTR-3B mismatch, GSTR-4 draft status, pending IMS actions, Rule 42 reversal. Rate each High/Medium/Low and give specific mitigation steps."},
+    {id:"forecast",label:"Cash Flow Forecast",icon:"🔮",prompt:"Forecast our GST cash outflow for the next 2 weeks. Tax grew 13.2% MoM. What's the estimated Apr 2024 liability? How much cash should we keep liquid for GST payments? Should we use ITC or pay cash first?"},
+    {id:"suppliers",label:"Supplier Risk Report",icon:"🏭",prompt:"Analyse our supplier risk from IMS data. Which supplier is most risky and why? Delhi Chemical Works has 2 rejections — what does that mean for our ITC? Which suppliers should we audit or follow up with immediately?"},
+  ];
+
+  async function run(a){
+    setLoading(p=>({...p,[a.id]:true}));
+    try{
+      const r=await callAI([{role:"user",content:a.prompt}]);
+      setResults(p=>({...p,[a.id]:r}));
+    }catch(e){setResults(p=>({...p,[a.id]:e.message==="NO_KEY"?"⚠️ No API key set. Click the 🔑 button in the chatbot to add your Anthropic API key and unlock live AI analysis.":"⚠️ API Error: "+e.message}));}
+    setLoading(p=>({...p,[a.id]:false}));
+  }
+
+  return(
+    <div>
+      <div className="bg-ey-navy rounded-xl p-5 mb-5 flex items-center gap-4">
+        <div className="w-12 h-12 bg-ey-yellow rounded-xl flex items-center justify-center text-ey-navy font-bold text-xl">AI</div>
+        <div>
+          <h2 className="text-white font-semibold">AI-Powered GST Intelligence</h2>
+          <p className="text-gray-400 text-sm">Each analysis uses your real company data — returns, IMS, ledger, anomalies · Powered by Claude</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2"><div className="pulse"></div><span className="text-green-400 text-xs">Live</span></div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        {analyses.map(a=>(
+          <div key={a.id} className="bg-white rounded-xl border border-ey-gray-mid p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2"><span className="text-xl">{a.icon}</span><h3 className="text-sm font-semibold text-ey-charcoal">{a.label}</h3></div>
+              <button onClick={()=>run(a)} disabled={loading[a.id]}
+                className="text-xs bg-ey-navy text-ey-yellow hover:bg-ey-navy-light disabled:opacity-50 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5">
+                {loading[a.id]?<><div className="ai-dot" style={{background:"#FFD400"}}></div><div className="ai-dot" style={{background:"#FFD400"}}></div><div className="ai-dot" style={{background:"#FFD400"}}></div></>:<>✦ Generate</>}
+              </button>
+            </div>
+            {results[a.id]?
+              <div className="bg-ey-gray rounded-lg p-3 text-xs text-ey-charcoal leading-relaxed whitespace-pre-wrap border-l-2 border-ey-yellow max-h-48 overflow-y-auto">{results[a.id]}</div>
+              :<div className="bg-ey-gray rounded-lg p-4 text-xs text-ey-gray-dark text-center">Click Generate — AI will analyse your actual {COMPANY} data</div>}
+          </div>
+        ))}
+      </div>
+      {/* Anomaly table */}
+      <div className="bg-white rounded-xl border border-ey-gray-mid overflow-hidden">
+        <div className="px-5 py-4 border-b border-ey-gray-mid"><h3 className="text-sm font-semibold text-ey-charcoal">Detected Anomalies</h3></div>
+        <table className="w-full text-sm" style={{borderCollapse:"collapse"}}>
+          <thead><tr className="bg-ey-gray">{["Type","Description","Period","Severity","Action Required"].map(h=><th key={h} className="text-left px-5 py-3 text-xs font-semibold text-ey-gray-dark uppercase border-b border-ey-gray-mid">{h}</th>)}</tr></thead>
+          <tbody>{ANOMALIES.map((a,i)=>(
+            <tr key={i} className={`trh border-b border-ey-gray-mid ${a.severity==="High"?"bg-red-50/40":""}`}>
+              <td className="px-5 py-3 text-xs font-semibold text-ey-charcoal">{a.type}</td>
+              <td className="px-5 py-3 text-xs text-ey-charcoal">{a.desc}</td>
+              <td className="px-5 py-3 text-xs text-ey-gray-dark">{a.period}</td>
+              <td className="px-5 py-3"><span className={`badge ${a.severity==="High"?"badge-err":a.severity==="Medium"?"badge-pending":"badge-draft"}`}>{a.severity}</span></td>
+              <td className="px-5 py-3 text-xs text-ey-gray-dark">{a.action}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   REPORT MODAL
+══════════════════════════════════════════ */
+function ReportModal({filtered,onClose}){
+  const[fmt2,setFmt2]=useState("excel");
+  const[scope,setScope]=useState("returns");
+  const[done,setDone]=useState(false);
+  const[gen,setGen]=useState(false);
+
+  function doExport(){
+    setGen(true);
+    setTimeout(()=>{
+      if(scope==="returns"){
+        const rows=filtered.map(r=>({"Return Type":r.type,Period:r.period,Status:r.status,"Taxable Amount":r.taxable,"Tax Amount":r.tax,IGST:r.igst,CGST:r.cgst,SGST:r.sgst,"Last Updated":r.updated,"Filed By":r.by}));
+        if(fmt2==="excel")exportXLSX(rows,`DigiGST_Returns_${new Date().toISOString().slice(0,10)}.xlsx`,"Returns");
+        else if(fmt2==="csv")exportCSV(rows,`DigiGST_Returns_${new Date().toISOString().slice(0,10)}.csv`);
+        else exportPDF("GST Return Register",["Return","Period","Status","Taxable","Tax","IGST","CGST","SGST","Updated","By"],filtered.map(r=>[r.type,r.period,r.status,fmt(r.taxable),fmt(r.tax),fmt(r.igst),fmt(r.cgst),fmt(r.sgst),r.updated,r.by]),`DigiGST_Returns_${new Date().toISOString().slice(0,10)}.pdf`);
+      }else if(scope==="ims"){
+        const rows=IMS.map(r=>({Supplier:r.supplier,GSTIN:r.gstin,Period:r.period,Invoices:r.invoices,Eligible:r.eligible,Pending:r.pending,Rejected:r.rejected,"ITC Amount":r.itc,Risk:r.risk}));
+        if(fmt2==="excel")exportXLSX(rows,"DigiGST_IMS.xlsx","IMS");
+        else if(fmt2==="csv")exportCSV(rows,"DigiGST_IMS.csv");
+        else exportPDF("IMS Report",["Supplier","GSTIN","Period","Invoices","Eligible","Pending","Rejected","ITC","Risk"],IMS.map(r=>[r.supplier,r.gstin,r.period,r.invoices,r.eligible,r.pending,r.rejected,fmt(r.itc),r.risk]),"DigiGST_IMS.pdf");
+      }else{
+        const rows=LEDGER.map(r=>({Date:r.date,Description:r.desc,Type:r.type,Debit:r.debit,Credit:r.credit,Balance:r.balance}));
+        if(fmt2==="excel")exportXLSX(rows,"DigiGST_Ledger.xlsx","Ledger");
+        else if(fmt2==="csv")exportCSV(rows,"DigiGST_Ledger.csv");
+        else exportPDF("Credit Ledger",["Date","Description","Type","Debit","Credit","Balance"],LEDGER.map(r=>[r.date,r.desc,r.type,r.debit>0?fmt(r.debit):"—",r.credit>0?fmt(r.credit):"—",fmt(r.balance)]),"DigiGST_Ledger.pdf");
+      }
+      setGen(false);setDone(true);
+    },900);
+  }
+
+  return(
+    <div className="modal-ov" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl" onClick={e=>e.stopPropagation()}>
+        {!done?(
+          <>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-ey-yellow-light rounded-xl flex items-center justify-center text-2xl">📥</div>
+              <div><h3 className="text-lg font-semibold text-ey-charcoal">Generate Report</h3><p className="text-sm text-ey-gray-dark">Download real data as Excel, PDF or CSV</p></div>
+            </div>
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-ey-gray-dark uppercase tracking-wide mb-2">Report Scope</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[{v:"returns",l:"Return Register",i:"📋"},{v:"ims",l:"IMS Report",i:"📈"},{v:"ledger",l:"Ledger",i:"📒"}].map(o=>(
+                  <button key={o.v} onClick={()=>setScope(o.v)} className={`p-3 rounded-xl border text-xs font-medium flex flex-col items-center gap-1 transition-all ${scope===o.v?"border-ey-yellow bg-ey-yellow-pale":"border-ey-gray-mid text-ey-gray-dark hover:border-yellow-300"}`}>
+                    <span className="text-xl">{o.i}</span>{o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-ey-gray-dark uppercase tracking-wide mb-2">Format</p>
+              <div className="flex gap-3">
+                {[{v:"excel",l:"Excel .xlsx",i:"🟢"},{v:"pdf",l:"PDF",i:"🔴"},{v:"csv",l:"CSV",i:"🔵"}].map(f=>(
+                  <button key={f.v} onClick={()=>setFmt2(f.v)} className={`flex-1 py-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${fmt2===f.v?"border-ey-yellow bg-ey-yellow text-ey-navy":"border-ey-gray-mid text-ey-gray-dark hover:bg-ey-gray"}`}>
+                    <span>{f.i}</span>{f.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="bg-ey-gray rounded-xl p-4 mb-6 grid grid-cols-2 gap-3">
+              <div><span className="text-ey-gray-dark text-xs block">Company</span><span className="font-medium text-ey-charcoal text-xs">{COMPANY}</span></div>
+              <div><span className="text-ey-gray-dark text-xs block">GSTIN</span><span className="font-mono text-ey-charcoal text-xs">{GSTIN}</span></div>
+              <div><span className="text-ey-gray-dark text-xs block">Records</span><span className="font-medium text-ey-charcoal text-xs">{scope==="returns"?filtered.length:scope==="ims"?IMS.length:LEDGER.length} rows</span></div>
+              <div><span className="text-ey-gray-dark text-xs block">Date</span><span className="font-medium text-ey-charcoal text-xs">{new Date().toLocaleDateString("en-IN")}</span></div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={doExport} disabled={gen} className="flex-1 bg-ey-yellow hover:bg-ey-yellow-dark disabled:opacity-60 text-ey-navy font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+                {gen?<><div className="ai-dot" style={{background:"#1A1A2E"}}></div><div className="ai-dot" style={{background:"#1A1A2E"}}></div><div className="ai-dot" style={{background:"#1A1A2E"}}></div></>:<>⬇ Download {fmt2.toUpperCase()}</>}
+              </button>
+              <button onClick={onClose} className="px-5 border border-ey-gray-mid text-ey-charcoal font-medium py-3 rounded-xl text-sm hover:bg-ey-gray">Cancel</button>
+            </div>
+          </>
+        ):(
+          <div className="text-center py-6">
+            <div className="text-5xl mb-4">✅</div>
+            <h3 className="text-lg font-semibold text-ey-charcoal mb-2">Downloaded Successfully</h3>
+            <p className="text-sm text-ey-gray-dark mb-6">Your {fmt2.toUpperCase()} report has been saved.</p>
+            <button onClick={onClose} className="bg-ey-yellow text-ey-navy font-semibold px-8 py-2.5 rounded-xl">Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
